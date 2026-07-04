@@ -2,6 +2,7 @@
 using MatchmakingEngine.Data;
 using MatchmakingEngine.DTO;
 using MatchmakingEngine.Domain;
+using Microsoft.EntityFrameworkCore;
 
 namespace MatchmakingEngine.Controllers;
 
@@ -13,6 +14,24 @@ public class PlayersController : ControllerBase
     public PlayersController(MatchmakingDbContext context)
     {
         _context = context;
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetAllPlayers()
+    {
+        var players = await _context.Players.ToListAsync();
+        return Ok(players);
+    }
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetPlayerById(Guid id)
+    {
+        var player = await _context.Players.FindAsync(id);
+
+        if (player == null)
+            return NotFound(new { message = "Player with this id dont exist." });
+
+        return Ok(player);
     }
 
     [HttpPost]

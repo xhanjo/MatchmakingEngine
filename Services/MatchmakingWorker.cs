@@ -20,7 +20,7 @@ public class MatchmakingWorker : BackgroundService
 
             if (ticket != null)
             {
-                _logger.LogInformation("[Ticket Caught] Player {Username} (MMR: {Mmr}, Region: {Region}) out of matchmaking queue!",
+                _logger.LogInformation("[Queue] Ticket dequeued for player {Username} (MMR: {Mmr}, Region: {Region}). Ready for match evaluation!",
                     ticket.Username, ticket.Mmr, ticket.Region);
             }
         }

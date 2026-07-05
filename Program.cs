@@ -15,6 +15,8 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddSingleton<IMatchmakingQueue, MatchmakingQueue>();
 
+builder.Services.AddHostedService<MatchmakingWorker>();
+
 builder.Services.AddDbContext<MatchmakingDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
 );

@@ -4,7 +4,7 @@
 public record MatchmakingTicket
     (
     Guid TicketId,
-    Guid PlayedId,
+    Guid PlayerId,
     string Username,
     double Mmr,
     double TrustFactor,

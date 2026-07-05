@@ -2,6 +2,7 @@ using MatchmakingEngine.Data;
 using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
 using Npgsql.EntityFrameworkCore.PostgreSQL;
+using MatchmakingEngine.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +12,8 @@ builder.Services.AddControllers();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddSingleton<IMatchmakingQueue, MatchmakingQueue>();
 
 builder.Services.AddDbContext<MatchmakingDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))

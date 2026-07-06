@@ -1,5 +1,7 @@
 ﻿using MatchmakingEngine.Domain;
 using System.Transactions;
+using Microsoft.Extensions.DependencyInjection;
+using MatchmakingEngine.Data;
 
 namespace MatchmakingEngine.Services;
 
@@ -7,16 +9,17 @@ public class MatchmakingWorker : BackgroundService
 {
     private readonly IMatchmakingQueue _queue;
     private readonly ILogger<MatchmakingWorker> _logger;
+    private readonly IServiceScopeFactory _scopeFactory;
 
     private readonly List<MatchmakingTicket> _waitingRoom = new();
 
     private const double MaxMmrDifference = 100.0;
     private const double MaxTrustDifference = 0.3;
-    public MatchmakingWorker(IMatchmakingQueue queue, ILogger<MatchmakingWorker> logger)
+    public MatchmakingWorker(IMatchmakingQueue queue, ILogger<MatchmakingWorker> logger, IServiceScopeFactory scopeFactory)
     {
         _queue = queue;
         _logger = logger;
-
+        _scopeFactory = scopeFactory;
     }
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -33,7 +36,7 @@ public class MatchmakingWorker : BackgroundService
                     _logger.LogInformation("[Queue] Ticket dequeued for player {Username} (MMR: {Mmr}, Region: {Region}). Ready for match evaluation!",
                         newTicket.Username, newTicket.Mmr, newTicket.Region);
 
-                    TryMatchPlayer(newTicket);
+                    await TryMatchPlayerAsync(newTicket);
                 }
             }
         }
@@ -44,7 +47,7 @@ public class MatchmakingWorker : BackgroundService
 
     }
 
-    private void TryMatchPlayer(MatchmakingTicket newTicket)
+    private async Task TryMatchPlayerAsync(MatchmakingTicket newTicket)
     {
         var opponent = _waitingRoom.FirstOrDefault(waitingTicket =>
         waitingTicket.Region == newTicket.Region &&
@@ -56,6 +59,22 @@ public class MatchmakingWorker : BackgroundService
             _waitingRoom.Remove(opponent);
 
             var lobbyId = Guid.NewGuid();
+            var match = new Match(
+                Id: lobbyId,
+                Player1Id: newTicket.PlayerId,
+                Player2Id: opponent.PlayerId,
+                AverageMmr: (newTicket.Mmr + opponent.Mmr) / 2.0,
+                CreatedAt: DateTimeOffset.UtcNow
+                );
+            
+            // Dbcontext - scoper, worker singletone => scopefactory for temporary scope
+            using (var scope = _scopeFactory.CreateScope())
+            {
+                var dbContext = scope.ServiceProvider.GetRequiredService<MatchmakingDbContext>();
+
+                dbContext.Matches.Add(match);
+                await dbContext.SaveChangesAsync();
+            }
 
             _logger.LogWarning("[MATCH FOUND] Lobby {LobbyId} created! Player [{P1}] (MMR: {M1}) vs Player [{P2}] (MMR: {M2}) on Region {Region}!",
                 lobbyId, newTicket.Username, newTicket.Mmr, opponent.Username, opponent.Mmr, newTicket.Region);

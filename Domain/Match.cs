@@ -6,4 +6,9 @@ public record Match(
     Guid Player2Id,
     double AverageMmr,
     DateTimeOffset CreatedAt
-    );
+)
+{
+    public MatchStatus Status { get; set; } = MatchStatus.Pending;
+    public bool Player1Accepted { get; set; } = false;
+    public bool Player2Accepted { get; set; } = false;
+}

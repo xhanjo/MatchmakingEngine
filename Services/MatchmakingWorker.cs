@@ -57,6 +57,8 @@ public class MatchmakingWorker : BackgroundService
         if (opponent != null)
         {
             _waitingRoom.Remove(opponent);
+            _queue.RemovePlayer(newTicket.PlayerId);
+            _queue.RemovePlayer(opponent.PlayerId);
 
             var lobbyId = Guid.NewGuid();
             var match = new Match(

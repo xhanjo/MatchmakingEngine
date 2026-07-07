@@ -1,9 +1,12 @@
 ﻿using MatchmakingEngine.Data;
 using MatchmakingEngine.Domain;
+using MatchmakingEngine.DTO;
 using MatchmakingEngine.Services;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration.EnvironmentVariables;
+using System.Net.NetworkInformation;
 
 namespace MatchmakingEngine.Controllers;
 
@@ -57,21 +60,24 @@ public class MatchmakingController : ControllerBase
 
         if (match != null)
         {
-            return Ok(new
-            {
-                status = "MatchFound",
-                lobbyId = match.Id,
-                AverageMmr = match.AverageMmr,
-                CreatedAt = match.CreatedAt
-            });
+            return Ok(new PollingStatusResponseDto(
+                Status: PollingStatus.MatchFound.ToString(),
+                LobbyId: match.Id,
+                AverageMmr: match.AverageMmr,
+                CreatedAt: match.CreatedAt
+            ));
         }
 
         if (_queue.IsPlayerInQueue(playerId))
         {
-            return Ok(new { status = "Searching" });
+            return Ok(new PollingStatusResponseDto(
+                Status: PollingStatus.Searching.ToString()
+                ));
         }
 
-        return Ok(new { status = "Idle" });
+        return Ok(new PollingStatusResponseDto(
+            Status: PollingStatus.Idle.ToString()
+            ));
     }
     [HttpPost("accept/{matchId}")]
     public async Task<IActionResult> AcceptMatch(Guid matchId, [FromQuery] Guid playerId)
@@ -132,7 +138,7 @@ public class MatchmakingController : ControllerBase
         double MmrChange = 30.0;
 
         winner.RecordWin(MmrChange);
-        loser.RecordLoss(MmrChange);
+loser.RecordLoss(MmrChange);
         match.Status = MatchStatus.Finished;
 
         await _context.SaveChangesAsync();

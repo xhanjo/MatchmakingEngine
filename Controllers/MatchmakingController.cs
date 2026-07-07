@@ -3,6 +3,7 @@ using MatchmakingEngine.Domain;
 using MatchmakingEngine.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration.EnvironmentVariables;
 
 namespace MatchmakingEngine.Controllers;
 
@@ -82,8 +83,8 @@ public class MatchmakingController : ControllerBase
         if (playerId != match.Player1Id && playerId != match.Player2Id)
             return BadRequest(new { message = "You aren't a member of this match!" });
 
-        if (playerId ==  match.Player1Id )
-             match.Player1Accepted = true;
+        if (playerId == match.Player1Id)
+            match.Player1Accepted = true;
         if (playerId == match.Player2Id)
             match.Player2Accepted = true;
 
@@ -93,11 +94,55 @@ public class MatchmakingController : ControllerBase
             _logger.LogInformation("[GAME START] All player accepted! Match {MatchId} is starting!", match.Id);
         }
         await _context.SaveChangesAsync();
-        return Ok(new 
-        { 
+        return Ok(new
+        {
             status = match.Status == MatchStatus.Accepted ? "Match started" : "Waiting for other player",
             player1Accepted = match.Player1Accepted,
             player2Accepted = match.Player2Accepted,
+            MatchStatus = match.Status
+        });
+    }
+
+    [HttpPost("complete/{matchId}")]
+    public async Task<IActionResult> CompleteMatch(Guid matchId, [FromQuery] Guid winnerId)
+    {
+        
+        var match = await _context.Matches.FindAsync(matchId);
+        if (match == null)
+            return NotFound(new { message = "Match not found!" });
+
+        if (match.Status != MatchStatus.Accepted)
+            return BadRequest(new { message = "Match hasn't started yet or already has ended" });
+
+        if (winnerId != match.Player1Id && winnerId != match.Player2Id)
+        {
+            return BadRequest(new { message = "Winner wasn't a member of that match!" });
+        }
+
+        Guid loserId = (winnerId == match.Player1Id) ? match.Player2Id : match.Player1Id;
+
+        var winner = await _context.Players.FindAsync(winnerId);
+        var loser = await _context.Players.FindAsync(loserId);
+
+        if (winner == null || loser == null)
+            return NotFound(new { message =  "One of the players wasn't found in the database!" });
+
+        double MmrChange = 30.0;
+        
+        winner.Mmr += MmrChange;
+        loser.Mmr = Math.Max(0, loser.Mmr - MmrChange);
+        match.Status = MatchStatus.Finished;
+
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("[GAME END] Match {matchId} completed! Winner: {winner} ({WMmr}), Loser: {loser} ({LMmr})",
+            match.Id, winner.Username, winner.Mmr, loser.Username, loser.Mmr);
+
+        return Ok(new
+        {
+            message = "Match completed successfully!",
+            winner = new { winner.Username, newMmr = winner.Mmr },
+            loser = new { loser.Username, newMmr =  loser.Mmr },
             MatchStatus = match.Status
         });
     }

@@ -12,11 +12,12 @@ public class MatchmakingController : ControllerBase
 {
     private readonly MatchmakingDbContext _context;
     private readonly IMatchmakingQueue _queue;
-
-    public MatchmakingController(MatchmakingDbContext context, IMatchmakingQueue queue)
+    private readonly ILogger<MatchmakingController> _logger;
+    public MatchmakingController(MatchmakingDbContext context, IMatchmakingQueue queue, ILogger<MatchmakingController> logger)
     {
         _context = context;
         _queue = queue;
+        _logger = logger;
     }
 
     [HttpPost("join/{playerId}")]
@@ -53,12 +54,12 @@ public class MatchmakingController : ControllerBase
 
         if (match != null)
         {
-            return Ok(new 
-            { 
-                status = "MatchFound", 
-                lobbyId = match.Id, 
-                AverageMmr = match.AverageMmr, 
-                CreatedAt = match.CreatedAt 
+            return Ok(new
+            {
+                status = "MatchFound",
+                lobbyId = match.Id,
+                AverageMmr = match.AverageMmr,
+                CreatedAt = match.CreatedAt
             });
         }
 
@@ -68,5 +69,36 @@ public class MatchmakingController : ControllerBase
         }
 
         return Ok(new { status = "Idle" });
+    }
+    [HttpPost("accept/{matchId}")]
+    public async Task<IActionResult> AcceptMatch(Guid matchId, [FromQuery] Guid playerId)
+    {
+        var match = await _context.Matches.FindAsync(matchId);
+        if (match == null) return NotFound(new { message = "Match not found!" });
+
+        if (match.Status != MatchStatus.Pending)
+            return BadRequest(new { message = "This match isn't waiting for acceptance anymore!" });
+
+        if (playerId != match.Player1Id && playerId != match.Player2Id)
+            return BadRequest(new { message = "You aren't a member of this match!" });
+
+        if (playerId ==  match.Player1Id )
+             match.Player1Accepted = true;
+        if (playerId == match.Player2Id)
+            match.Player2Accepted = true;
+
+        if (match.Player1Accepted && match.Player2Accepted)
+        {
+            match.Status = MatchStatus.Accepted;
+            _logger.LogInformation("[GAME START] All player accepted! Match {MatchId} is starting!", match.Id);
+        }
+        await _context.SaveChangesAsync();
+        return Ok(new 
+        { 
+            status = match.Status == MatchStatus.Accepted ? "Match started" : "Waiting for other player",
+            player1Accepted = match.Player1Accepted,
+            player2Accepted = match.Player2Accepted,
+            MatchStatus = match.Status
+        });
     }
 }

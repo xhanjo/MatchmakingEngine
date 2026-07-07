@@ -19,4 +19,13 @@ public class Player
     public PlayerRegion Region { get; set; } = PlayerRegion.EuWest;
 
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
+
+    public void RecordWin(double mmrChange)
+    {
+        Mmr += mmrChange;
+    }
+    public void RecordLoss(double mmrChange)
+    {
+        Mmr = Math.Max(0, Mmr - mmrChange);
+    }
 }

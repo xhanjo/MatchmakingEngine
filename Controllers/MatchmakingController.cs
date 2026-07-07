@@ -131,8 +131,8 @@ public class MatchmakingController : ControllerBase
 
         double MmrChange = 30.0;
 
-        winner.Mmr += MmrChange;
-        loser.Mmr = Math.Max(0, loser.Mmr - MmrChange);
+        winner.RecordWin(MmrChange);
+        loser.RecordLoss(MmrChange);
         match.Status = MatchStatus.Finished;
 
         await _context.SaveChangesAsync();

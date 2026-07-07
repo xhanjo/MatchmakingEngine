@@ -49,7 +49,9 @@ public class MatchmakingController : ControllerBase
         if (player == null) return NotFound(new { message = "Player don't exist!" });
 
         var match = await _context.Matches
-            .Where(m => m.Player1Id == playerId || m.Player2Id == playerId)
+            .Where(m => (m.Player1Id == playerId || m.Player2Id == playerId)
+                && m.Status != MatchStatus.Finished
+                && m.Status != MatchStatus.Canceled)
             .OrderByDescending(m => m.CreatedAt)
             .FirstOrDefaultAsync();
 
@@ -106,7 +108,7 @@ public class MatchmakingController : ControllerBase
     [HttpPost("complete/{matchId}")]
     public async Task<IActionResult> CompleteMatch(Guid matchId, [FromQuery] Guid winnerId)
     {
-        
+
         var match = await _context.Matches.FindAsync(matchId);
         if (match == null)
             return NotFound(new { message = "Match not found!" });
@@ -125,10 +127,10 @@ public class MatchmakingController : ControllerBase
         var loser = await _context.Players.FindAsync(loserId);
 
         if (winner == null || loser == null)
-            return NotFound(new { message =  "One of the players wasn't found in the database!" });
+            return NotFound(new { message = "One of the players wasn't found in the database!" });
 
         double MmrChange = 30.0;
-        
+
         winner.Mmr += MmrChange;
         loser.Mmr = Math.Max(0, loser.Mmr - MmrChange);
         match.Status = MatchStatus.Finished;
@@ -142,7 +144,7 @@ public class MatchmakingController : ControllerBase
         {
             message = "Match completed successfully!",
             winner = new { winner.Username, newMmr = winner.Mmr },
-            loser = new { loser.Username, newMmr =  loser.Mmr },
+            loser = new { loser.Username, newMmr = loser.Mmr },
             MatchStatus = match.Status
         });
     }

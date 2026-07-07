@@ -8,6 +8,5 @@ public interface IMatchmakingQueue
     ValueTask<MatchmakingTicket?> DequeueAsync(CancellationToken cancellationToken);
 
     bool IsPlayerInQueue(Guid playerId);
-
     void RemovePlayer(Guid playerId);
 }

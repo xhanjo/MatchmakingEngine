@@ -3,6 +3,7 @@ using MatchmakingEngine.Data;
 using MatchmakingEngine.DTO;
 using MatchmakingEngine.Domain;
 using Microsoft.EntityFrameworkCore;
+using MatchmakingEngine.Domain.Exceptions;
 
 namespace MatchmakingEngine.Controllers;
 
@@ -29,7 +30,7 @@ public class PlayersController : ControllerBase
         var player = await _context.Players.FindAsync(id);
 
         if (player == null)
-            return NotFound(new { message = "Player with this id dont exist." });
+            throw new NotFoundException($"Player with ID {id} was not found");
 
         return Ok(player);
     }

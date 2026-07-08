@@ -1,5 +1,6 @@
 ﻿using MatchmakingEngine.Data;
 using MatchmakingEngine.Domain;
+using MatchmakingEngine.Domain.Exceptions;
 using MatchmakingEngine.DTO;
 using MatchmakingEngine.Services;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -28,7 +29,8 @@ public class MatchmakingController : ControllerBase
     public async Task<IActionResult> JoinQueue(Guid playerId)
     {
         var player = await _context.Players.FindAsync(playerId);
-        if (player == null) return NotFound(new { message = $"Player with ID {playerId} is not found" });
+        if (player == null)
+            throw new NotFoundException($"Player with ID {playerId} was not found.");
 
         var ticket = new MatchmakingTicket(
             TicketId: Guid.NewGuid(),
@@ -49,7 +51,8 @@ public class MatchmakingController : ControllerBase
     public async Task<IActionResult> GetStatus(Guid playerId)
     {
         var player = await _context.Players.FindAsync(playerId);
-        if (player == null) return NotFound(new { message = "Player don't exist!" });
+        if (player == null)
+            throw new NotFoundException($"Player with ID {playerId} does not exist");
 
         var match = await _context.Matches
             .Where(m => (m.Player1Id == playerId || m.Player2Id == playerId)
@@ -83,13 +86,14 @@ public class MatchmakingController : ControllerBase
     public async Task<IActionResult> AcceptMatch(Guid matchId, [FromQuery] Guid playerId)
     {
         var match = await _context.Matches.FindAsync(matchId);
-        if (match == null) return NotFound(new { message = "Match not found!" });
+        if (match == null)
+            throw new NotFoundException($"Match with ID {matchId} was not found.");
 
         if (match.Status != MatchStatus.Pending)
-            return BadRequest(new { message = "This match isn't waiting for acceptance anymore!" });
+            throw new ConflictException("This match is no longer waiting for acceptance.");
 
         if (playerId != match.Player1Id && playerId != match.Player2Id)
-            return BadRequest(new { message = "You aren't a member of this match!" });
+            throw new ConflictException("You are not a participant in this match.");
 
         if (playerId == match.Player1Id)
             match.Player1Accepted = true;
@@ -117,14 +121,14 @@ public class MatchmakingController : ControllerBase
 
         var match = await _context.Matches.FindAsync(matchId);
         if (match == null)
-            return NotFound(new { message = "Match not found!" });
+            throw new NotFoundException($"Match with ID {matchId} was not found.");
 
         if (match.Status != MatchStatus.Accepted)
-            return BadRequest(new { message = "Match hasn't started yet or already has ended" });
+            throw new ConflictException("Match has not started yet or is already finished");
 
         if (winnerId != match.Player1Id && winnerId != match.Player2Id)
         {
-            return BadRequest(new { message = "Winner wasn't a member of that match!" });
+            throw new ConflictException("The winner was not a participant in this match.");
         }
 
         Guid loserId = (winnerId == match.Player1Id) ? match.Player2Id : match.Player1Id;
@@ -133,7 +137,7 @@ public class MatchmakingController : ControllerBase
         var loser = await _context.Players.FindAsync(loserId);
 
         if (winner == null || loser == null)
-            return NotFound(new { message = "One of the players wasn't found in the database!" });
+            throw new NotFoundException("One or both players were not found in the database.");
 
         double MmrChange = 30.0;
 

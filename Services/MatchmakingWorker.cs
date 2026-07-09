@@ -2,6 +2,8 @@
 using System.Transactions;
 using Microsoft.Extensions.DependencyInjection;
 using MatchmakingEngine.Data;
+using Microsoft.AspNetCore.SignalR;
+using MatchmakingEngine.Hubs;
 
 namespace MatchmakingEngine.Services;
 
@@ -10,16 +12,23 @@ public class MatchmakingWorker : BackgroundService
     private readonly IMatchmakingQueue _queue;
     private readonly ILogger<MatchmakingWorker> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IHubContext<MatchmakingHub> _hubContext;
 
     private readonly List<MatchmakingTicket> _waitingRoom = new();
 
     private const double MaxMmrDifference = 100.0;
     private const double MaxTrustDifference = 0.3;
-    public MatchmakingWorker(IMatchmakingQueue queue, ILogger<MatchmakingWorker> logger, IServiceScopeFactory scopeFactory)
+    public MatchmakingWorker(
+        IMatchmakingQueue queue,
+        ILogger<MatchmakingWorker> logger,
+        IServiceScopeFactory scopeFactory,
+        IHubContext<MatchmakingHub> hubContext
+        )
     {
         _queue = queue;
         _logger = logger;
         _scopeFactory = scopeFactory;
+        _hubContext = hubContext;
     }
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -68,7 +77,7 @@ public class MatchmakingWorker : BackgroundService
                 AverageMmr: (newTicket.Mmr + opponent.Mmr) / 2.0,
                 CreatedAt: DateTimeOffset.UtcNow
                 );
-            
+
             // Dbcontext - scoper, worker singletone => scopefactory for temporary scope
             using (var scope = _scopeFactory.CreateScope())
             {
@@ -77,6 +86,19 @@ public class MatchmakingWorker : BackgroundService
                 dbContext.Matches.Add(match);
                 await dbContext.SaveChangesAsync();
             }
+
+            var matchPayload = new
+            {
+                LobbyId = lobbyId,
+                AverageMmr = match.AverageMmr,
+                Message = "Match found! Please accept the match."
+            };
+
+            await _hubContext.Clients.Group(newTicket.PlayerId.ToString())
+                .SendAsync("MatchFound", matchPayload);
+
+            await _hubContext.Clients.Group(opponent.PlayerId.ToString())
+                .SendAsync("MatchFound", matchPayload);
 
             _logger.LogWarning("[MATCH FOUND] Lobby {LobbyId} created! Player [{P1}] (MMR: {M1}) vs Player [{P2}] (MMR: {M2}) on Region {Region}!",
                 lobbyId, newTicket.Username, newTicket.Mmr, opponent.Username, opponent.Mmr, newTicket.Region);

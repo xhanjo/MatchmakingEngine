@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
 using Npgsql.EntityFrameworkCore.PostgreSQL;
 using MatchmakingEngine.Services;
+using MatchmakingEngine.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,6 +13,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddSignalR();
 builder.Services.AddSingleton<IMatchmakingQueue, MatchmakingQueue>();
 builder.Services.AddHostedService<MatchmakingWorker>();
 
@@ -36,5 +38,7 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
+
+app.MapHub<MatchmakingHub>("/hubs/matchmaking");
 
 app.Run();

@@ -13,7 +13,9 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddSignalR();
+builder.Services.AddSignalR().AddStackExchangeRedis(builder.Configuration["Redis:Configuration"]!);
+var multiplexer = StackExchange.Redis.ConnectionMultiplexer.Connect(builder.Configuration["Redis:Configuration"]!);
+builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(multiplexer);
 builder.Services.AddSingleton<IMatchmakingQueue, MatchmakingQueue>();
 builder.Services.AddHostedService<MatchmakingWorker>();
 

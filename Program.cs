@@ -83,4 +83,11 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHub<MatchmakingHub>("/hubs/matchmaking");
 
+
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<MatchmakingEngine.Data.MatchmakingDbContext>();
+    context.Database.Migrate();
+}
+
 app.Run();

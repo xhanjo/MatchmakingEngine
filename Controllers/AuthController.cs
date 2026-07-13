@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Identity.Data;
+﻿using MatchmakingEngine.Data;
+using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -12,20 +14,25 @@ namespace MatchmakingEngine.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IConfiguration _configuration;
-    public AuthController(IConfiguration configuration)
+    private readonly MatchmakingDbContext _context;
+
+    public AuthController(IConfiguration configuration, MatchmakingDbContext context)
     {
         _configuration = configuration;
+        _context = context;
     }
 
     [HttpPost("login")]
-    public IActionResult Login([FromBody] LoginRequest request)
+    public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
-        var playerId = Guid.NewGuid();
-        var MMR = Random.Shared.Next(500, 2000);
+        var player = await _context.Players.FirstOrDefaultAsync(p => p.Username == request.Username);
 
-        var token = GenerateJwtToken(request.Username, playerId, MMR);
+        if (player == null)
+            return Unauthorized("Player not found.");
 
-        return Ok(new { Token = token, PlayerId = playerId });
+        var token = GenerateJwtToken(player.Username, player.Id, player.Mmr);
+
+        return Ok(new { Token = token, PlayerId = player.Id });
     }
 
     private string GenerateJwtToken(string username, Guid playerId, double mmr)

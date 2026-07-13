@@ -15,13 +15,18 @@ public class MatchmakingHub : Hub
 
     public override async Task OnConnectedAsync()
     {
-        var httpContext = Context.GetHttpContext();
-        var playerIdString = httpContext?.Request.Query["playerId"];
+        var playerIdString = Context.User?.FindFirst("PlayerId")?.Value;
 
         if (!string.IsNullOrEmpty(playerIdString))
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, playerIdString!);
-            _logger.LogInformation("Player is connected {ConnectionId}", Context.ConnectionId);
+
+            _logger.LogInformation("Verified Player {PlayerId} connected. ConnectionId: {ConnectionId}",
+               playerIdString, Context.ConnectionId);
+        }
+        else
+        {
+            _logger.LogWarning("Connection rejected. No PlayerId found in token");
         }
 
         await base.OnConnectedAsync();

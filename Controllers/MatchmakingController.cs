@@ -3,14 +3,17 @@ using MatchmakingEngine.Domain;
 using MatchmakingEngine.Domain.Exceptions;
 using MatchmakingEngine.DTO;
 using MatchmakingEngine.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration.EnvironmentVariables;
 using System.Net.NetworkInformation;
+using MatchmakingEngine.Hubs;
 
 namespace MatchmakingEngine.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class MatchmakingController : ControllerBase
@@ -25,12 +28,20 @@ public class MatchmakingController : ControllerBase
         _logger = logger;
     }
 
-    [HttpPost("join/{playerId}")]
-    public async Task<IActionResult> JoinQueue(Guid playerId)
+    [HttpPost("join")]
+    public async Task<IActionResult> JoinQueue()
     {
+        var playerIdStr = User.FindFirst("PlayerId")?.Value;
+
+        if (string.IsNullOrEmpty(playerIdStr))
+            return Unauthorized("Invalid token: PlayerId claim is missing");
+
+        var playerId = Guid.Parse(playerIdStr);
+
         var player = await _context.Players.FindAsync(playerId);
+
         if (player == null)
-            throw new NotFoundException($"Player with ID {playerId} was not found.");
+            throw new NotFoundException($"Player with ID {playerId} was not found in database.");
 
         var ticket = new MatchmakingTicket(
             TicketId: Guid.NewGuid(),
@@ -47,12 +58,20 @@ public class MatchmakingController : ControllerBase
         return Ok(new { message = "Player added to search queue!", ticket });
     }
 
-    [HttpGet("status/{playerId}")]
-    public async Task<IActionResult> GetStatus(Guid playerId)
+    [HttpGet("status")]
+    public async Task<IActionResult> GetStatus()
     {
+        var playerIdStr = User.FindFirst("PlayerId")?.Value;
+        
+        if (string.IsNullOrEmpty(playerIdStr))
+            return Unauthorized("Invalid token: PlayerId claim is missing");
+
+        var playerId = Guid.Parse(playerIdStr);
+
         var player = await _context.Players.FindAsync(playerId);
+
         if (player == null)
-            throw new NotFoundException($"Player with ID {playerId} does not exist");
+            throw new NotFoundException($"Player with ID {playerId} was not found in database.");
 
         var match = await _context.Matches
             .Where(m => (m.Player1Id == playerId || m.Player2Id == playerId)
@@ -83,8 +102,15 @@ public class MatchmakingController : ControllerBase
             ));
     }
     [HttpPost("accept/{matchId}")]
-    public async Task<IActionResult> AcceptMatch(Guid matchId, [FromQuery] Guid playerId)
+    public async Task<IActionResult> AcceptMatch(Guid matchId)
     {
+        var playerIdStr = User.FindFirst("PlayerId")?.Value;
+
+        if (string.IsNullOrEmpty(playerIdStr))
+            return Unauthorized("Invalid token: PlayerId claim is missing");
+
+        var playerId = Guid.Parse(playerIdStr);
+
         var match = await _context.Matches.FindAsync(matchId);
         if (match == null)
             throw new NotFoundException($"Match with ID {matchId} was not found.");

@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.Authorization;
 
 namespace MatchmakingEngine.Hubs;
 
+[Authorize]
 public class MatchmakingHub : Hub
 {
     private readonly ILogger<MatchmakingHub> _logger;

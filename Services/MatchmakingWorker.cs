@@ -39,8 +39,9 @@ public class MatchmakingWorker : BackgroundService
 
                 if (anchorId.HasValue)
                     await ProcessEvaluationAsync(anchorId.Value, stoppingToken);
-            }
 
+                await Task.Delay(2000, stoppingToken);
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occured during matchmaking cycle.");
@@ -91,8 +92,8 @@ public class MatchmakingWorker : BackgroundService
             await _queue.EnqueueAsync(anchor);
 
             _logger.LogInformation("[Queue] {User} waiting {Wait:N0}s. Delta {Delta} Requeued.",
-               anchor.Username, waitTimeSeconds, currentDelta);
-            }
+               anchor.Username, waitTimeSeconds.TotalSeconds, currentDelta);
+        }
 
     }
 

@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
+using FluentValidation;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -57,7 +58,12 @@ builder.Services.AddAuthentication(options =>
 });
 builder.Services.AddAuthorization();
 
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
+builder.Services.AddMediatR(cfg =>
+{
+    cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
+    cfg.AddOpenBehavior(typeof(MatchmakingEngine.Application.Behaviors.ValidationBehavior<,>));
+});
+builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
 builder.Services.AddSignalR().AddStackExchangeRedis(builder.Configuration["Redis:Configuration"]!);
 var multiplexer = StackExchange.Redis.ConnectionMultiplexer.Connect(builder.Configuration["Redis:Configuration"]!);
 builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(multiplexer);

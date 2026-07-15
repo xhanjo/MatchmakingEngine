@@ -3,18 +3,23 @@ using MatchmakingEngine.Data;
 using MatchmakingEngine.Hubs;
 using MatchmakingEngine.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using Npgsql.EntityFrameworkCore.PostgreSQL;
 using StackExchange.Redis;
 using System.Text;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+builder.Host.UseSerilog((context, loggerConfig) =>
+{
+    loggerConfig
+        .WriteTo.Console()
+        .WriteTo.File("logs/matchmaking-.txt", rollingInterval: RollingInterval.Day)
+        .Enrich.FromLogContext();
+});
 
+// Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -87,6 +92,8 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 var app = builder.Build();
 
 app.UseExceptionHandler();
+
+app.UseSerilogRequestLogging();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

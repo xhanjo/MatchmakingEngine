@@ -1,7 +1,6 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using MatchmakingEngine.Application.Commands.Matchmaking;
 using MatchmakingEngine.Application.Queries.Matchmaking;
 
@@ -47,6 +46,7 @@ public class MatchmakingController : ControllerBase
         return Ok(result);
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpPost("complete/{matchId}")]
     public async Task<IActionResult> CompleteMatch(Guid matchId, [FromQuery] Guid winnerId)
     {

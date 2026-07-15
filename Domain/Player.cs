@@ -6,6 +6,9 @@ public class Player
 {
     public Guid Id { get; set; } = Guid.NewGuid();
 
+    public string PasswordHash { get; set; } = string.Empty;
+    public PlayerRole Role { get; set; } = PlayerRole.Player;
+
     [Required]
     [MaxLength(50)] 
     public string Username { get; set; } = string.Empty;

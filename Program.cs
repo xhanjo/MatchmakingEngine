@@ -32,7 +32,11 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         ValidIssuer = builder.Configuration["Jwt:Issuer"],
         ValidAudience = builder.Configuration["Jwt:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
+        IssuerSigningKey = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(
+                builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key is missing in appsetings.json!")
+                )
+            )
     };
 
     options.Events = new JwtBearerEvents
@@ -53,6 +57,7 @@ builder.Services.AddAuthentication(options =>
 });
 builder.Services.AddAuthorization();
 
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 builder.Services.AddSignalR().AddStackExchangeRedis(builder.Configuration["Redis:Configuration"]!);
 var multiplexer = StackExchange.Redis.ConnectionMultiplexer.Connect(builder.Configuration["Redis:Configuration"]!);
 builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(multiplexer);
@@ -87,7 +92,26 @@ app.MapHub<MatchmakingHub>("/hubs/matchmaking");
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<MatchmakingEngine.Data.MatchmakingDbContext>();
-    context.Database.Migrate();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    int retries = 5;
+    while (retries > 0)
+    {
+        try
+        {
+            logger.LogInformation("Attempting to apply database migrations...");
+            context.Database.Migrate();
+            logger.LogInformation("Database migrated successfully!");
+            break;
+        }
+        catch (Exception ex)
+        {
+            retries--;
+            logger.LogWarning("Database is not ready yet. Retrying in 2 seconds... ({Retries} retries left)", retries);
+            if (retries == 0) throw;
+            Thread.Sleep(2000);
+        }
+    }
 }
 
 app.Run();

@@ -1,14 +1,15 @@
-using MatchmakingEngine.Data;
-using Microsoft.Extensions.Options;
-using Microsoft.EntityFrameworkCore;
-using Npgsql.EntityFrameworkCore.PostgreSQL;
-using MatchmakingEngine.Services;
-using MatchmakingEngine.Hubs;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
-using Microsoft.AspNetCore.Authorization;
 using FluentValidation;
+using MatchmakingEngine.Data;
+using MatchmakingEngine.Hubs;
+using MatchmakingEngine.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
+using StackExchange.Redis;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -64,9 +65,15 @@ builder.Services.AddMediatR(cfg =>
     cfg.AddOpenBehavior(typeof(MatchmakingEngine.Application.Behaviors.ValidationBehavior<,>));
 });
 builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
-builder.Services.AddSignalR().AddStackExchangeRedis(builder.Configuration["Redis:Configuration"]!);
-var multiplexer = StackExchange.Redis.ConnectionMultiplexer.Connect(builder.Configuration["Redis:Configuration"]!);
-builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(multiplexer);
+
+var redisConnectionString = builder.Configuration["Redis:Configuration"] ?? "localhost:6379,abortConnect=false";
+
+builder.Services.AddSignalR().AddStackExchangeRedis(redisConnectionString);
+
+builder.Services.AddSingleton<IConnectionMultiplexer>(
+    ConnectionMultiplexer.Connect(redisConnectionString)
+);
+
 builder.Services.AddSingleton<IMatchmakingQueue, MatchmakingQueue>();
 builder.Services.AddHostedService<MatchmakingWorker>();
 
@@ -110,7 +117,7 @@ using (var scope = app.Services.CreateScope())
             logger.LogInformation("Database migrated successfully!");
             break;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             retries--;
             logger.LogWarning("Database is not ready yet. Retrying in 2 seconds... ({Retries} retries left)", retries);

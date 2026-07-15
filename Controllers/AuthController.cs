@@ -1,11 +1,11 @@
 ﻿using MatchmakingEngine.Data;
-using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using BCrypt.Net;
 
 namespace MatchmakingEngine.Controllers;
 
@@ -28,14 +28,19 @@ public class AuthController : ControllerBase
         var player = await _context.Players.FirstOrDefaultAsync(p => p.Username == request.Username);
 
         if (player == null)
-            return Unauthorized("Player not found.");
+            return Unauthorized("Invalid username or password.");
 
-        var token = GenerateJwtToken(player.Username, player.Id, player.Mmr);
+        bool isPasswordValid = BCrypt.Net.BCrypt.Verify(request.Password, player.PasswordHash);
+
+        if (!isPasswordValid)
+            return Unauthorized("Invalid username or password.");
+
+        var token = GenerateJwtToken(player.Username, player.Id, player.Mmr, player.Role.ToString());
 
         return Ok(new { Token = token, PlayerId = player.Id });
     }
 
-    private string GenerateJwtToken(string username, Guid playerId, double mmr)
+    private string GenerateJwtToken(string username, Guid playerId, double mmr, string role)
     {
         var jwtKey = _configuration["Jwt:Key"] ?? throw new InvalidOperationException("Jwt key is missing");
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
@@ -46,7 +51,8 @@ public class AuthController : ControllerBase
             new Claim(JwtRegisteredClaimNames.Sub, username),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new Claim("PlayerId", playerId.ToString()),
-            new Claim("Mmr", mmr.ToString())
+            new Claim("Mmr", mmr.ToString()),
+            new Claim(ClaimTypes.Role, role)
         };
 
         var tokenDescriptor = new SecurityTokenDescriptor
@@ -65,4 +71,4 @@ public class AuthController : ControllerBase
     }
 }
 
-public record LoginRequest(string Username);
+public record LoginRequest(string Username, string Password);

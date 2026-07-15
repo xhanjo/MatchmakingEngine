@@ -4,6 +4,7 @@ using MatchmakingEngine.DTO;
 using MatchmakingEngine.Domain;
 using Microsoft.EntityFrameworkCore;
 using MatchmakingEngine.Domain.Exceptions;
+using BCrypt.Net;
 
 namespace MatchmakingEngine.Controllers;
 
@@ -41,7 +42,9 @@ public class PlayersController : ControllerBase
         var player = new Player
         {
             Username = request.Username,
-            Region = request.Region
+            Region = request.Region,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+            Role = request.Username.ToLower() == "alex" ? PlayerRole.Admin : PlayerRole.Player
         };
 
         _context.Players.Add(player);

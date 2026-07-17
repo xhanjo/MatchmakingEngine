@@ -51,7 +51,7 @@ public class MatchmakingWorker : BackgroundService
     }
 
 
-    private async Task ProcessEvaluationAsync(Guid anchorId, CancellationToken cancellationToken)
+    internal async Task ProcessEvaluationAsync(Guid anchorId, CancellationToken cancellationToken)
     {
         var anchor = await _queue.GetTicketAsync(anchorId);
         if (anchor == null) return;

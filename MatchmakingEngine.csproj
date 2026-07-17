@@ -26,6 +26,7 @@
 		<Content Remove="MatchmakingEngine.Tests\**" />
 		<EmbeddedResource Remove="MatchmakingEngine.Tests\**" />
 		<None Remove="MatchmakingEngine.Tests\**" />
+		<InternalsVisibleTo Include="MatchmakingEngine.Tests" />
 	</ItemGroup>
 
 </Project>

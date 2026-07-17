@@ -26,6 +26,8 @@ public class GetStatusQueryHandler : IRequestHandler<GetStatusQuery, PollingStat
             throw new NotFoundException($"Player with ID {request.PlayerId} was not found in database.");
 
         var match = await _context.Matches
+            .Include(m => m.Player1)
+            .Include(m => m.Player2)
             .Where(m => (m.Player1Id == request.PlayerId || m.Player2Id == request.PlayerId)
             && m.Status != MatchStatus.Finished
             && m.Status != MatchStatus.Canceled)

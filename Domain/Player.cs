@@ -6,11 +6,14 @@ public class Player
 {
     public Guid Id { get; set; } = Guid.NewGuid();
 
+    public ICollection<Match> MatchesAsPlayer1 { get; set; } = new List<Match>();
+    public ICollection<Match> MatchesAsPlayer2 { get; set; } = new List<Match>();
+
     public string PasswordHash { get; set; } = string.Empty;
     public PlayerRole Role { get; set; } = PlayerRole.Player;
 
     [Required]
-    [MaxLength(50)] 
+    [MaxLength(50)]
     public string Username { get; set; } = string.Empty;
 
     [Range(0, 5000)]

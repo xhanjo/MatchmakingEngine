@@ -89,6 +89,11 @@ builder.Services.AddDbContext<MatchmakingDbContext>(options =>
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
+    options.InstanceName = "Matchmaking_";
+});
 var app = builder.Build();
 
 app.UseExceptionHandler();

@@ -5,6 +5,8 @@ using MatchmakingEngine.Domain;
 using Microsoft.EntityFrameworkCore;
 using MatchmakingEngine.Domain.Exceptions;
 using BCrypt.Net;
+using Microsoft.Extensions.Caching.Distributed;
+using System.Text.Json;
 
 namespace MatchmakingEngine.Controllers;
 
@@ -13,17 +15,35 @@ namespace MatchmakingEngine.Controllers;
 public class PlayersController : ControllerBase
 {
     private readonly MatchmakingDbContext _context;
-    public PlayersController(MatchmakingDbContext context)
+    private readonly IDistributedCache _cache;
+    public PlayersController(MatchmakingDbContext context, IDistributedCache cache)
     {
         _context = context;
+        _cache = cache;
     }
 
     [HttpGet]
     public async Task<IActionResult> GetAllPlayers()
     {
+        string cacheKey = "all_players";
+        var cachedData = await _cache.GetStringAsync(cacheKey);
+
+        if (!string.IsNullOrEmpty(cachedData))
+        {
+            var playersFromCache = JsonSerializer.Deserialize<List<Player>>(cachedData);
+            return Ok(playersFromCache);
+        }
+
         var players = await _context.Players
             .AsNoTracking()
             .ToListAsync();
+
+        var cacheOptions = new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
+        };
+
+        await _cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(players), cacheOptions);
 
         return Ok(players);
     }

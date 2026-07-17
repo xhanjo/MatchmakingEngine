@@ -21,14 +21,19 @@ public class PlayersController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAllPlayers()
     {
-        var players = await _context.Players.ToListAsync();
+        var players = await _context.Players
+            .AsNoTracking()
+            .ToListAsync();
+
         return Ok(players);
     }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetPlayerById(Guid id)
     {
-        var player = await _context.Players.FindAsync(id);
+        var player = await _context.Players
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == id);
 
         if (player == null)
             throw new NotFoundException($"Player with ID {id} was not found");

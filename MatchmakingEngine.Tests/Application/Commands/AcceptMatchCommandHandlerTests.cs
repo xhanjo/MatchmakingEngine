@@ -4,7 +4,6 @@ using MatchmakingEngine.Domain;
 using MatchmakingEngine.Domain.Exceptions;
 using MatchmakingEngine.Tests.Helpers;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualBasic;
 using Moq;
 using Xunit;
 
@@ -51,4 +50,29 @@ public class AcceptMatchCommandHandlerTests
         await act.Should().ThrowAsync<ConflictException>().WithMessage("*not a participant*");
     }
 
+    [Fact]
+    public async Task Handle_BothPlayersAccept_ShouldBecomeAccepted()
+    {
+        using var context = TestDbContextFactory.Create();
+        var p1 = Guid.NewGuid();
+        var p2 = Guid.NewGuid();
+
+        var match = new Domain.Match(Guid.NewGuid(), p1, p2, 1000, DateTimeOffset.UtcNow)
+        {
+            Player1Accepted = true,
+            Status = MatchStatus.Pending
+        };
+        context.Matches.Add(match);
+        await context.SaveChangesAsync();
+
+        var handler = new AcceptMatchCommandHandler(context, _loggerMock.Object);
+        var command = new AcceptMatchCommand(p2, match.Id);
+
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        result.MatchStatus.Should().Be(MatchStatus.Accepted);
+        result.Player2Accepted.Should().BeTrue();
+
+
+    }
 }

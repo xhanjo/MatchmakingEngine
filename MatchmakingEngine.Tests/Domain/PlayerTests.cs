@@ -1,6 +1,5 @@
 ﻿using FluentAssertions;
 using MatchmakingEngine.Domain;
-using Microsoft.Extensions.Configuration.EnvironmentVariables;
 using Xunit;
 
 namespace MatchmakingEngine.MatchmakingEngine.Tests.Domain;

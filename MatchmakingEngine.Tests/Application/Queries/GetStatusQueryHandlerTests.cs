@@ -4,7 +4,6 @@ using MatchmakingEngine.Domain;
 using MatchmakingEngine.Services;
 using MatchmakingEngine.Tests.Helpers;
 using Moq;
-using StackExchange.Redis;
 using Xunit;
 
 namespace MatchmakingEngine.Tests.Application.Queries;

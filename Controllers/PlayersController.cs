@@ -1,82 +1,47 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using MatchmakingEngine.Data;
+using MediatR;
 using MatchmakingEngine.DTO;
-using MatchmakingEngine.Domain;
-using Microsoft.EntityFrameworkCore;
-using MatchmakingEngine.Domain.Exceptions;
-using BCrypt.Net;
-using Microsoft.Extensions.Caching.Distributed;
-using System.Text.Json;
+using MatchmakingEngine.Application.Queries.Players;
+using MatchmakingEngine.Application.Commands.Players;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Components.Forms;
 
 namespace MatchmakingEngine.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class PlayersController : ControllerBase
 {
-    private readonly MatchmakingDbContext _context;
-    private readonly IDistributedCache _cache;
-    public PlayersController(MatchmakingDbContext context, IDistributedCache cache)
+    private readonly IMediator _mediator;
+    public PlayersController(IMediator mediator)
     {
-        _context = context;
-        _cache = cache;
+        _mediator = mediator;
     }
 
+    [AllowAnonymous]
     [HttpGet]
     public async Task<IActionResult> GetAllPlayers()
     {
-        string cacheKey = "all_players";
-        var cachedData = await _cache.GetStringAsync(cacheKey);
-
-        if (!string.IsNullOrEmpty(cachedData))
-        {
-            var playersFromCache = JsonSerializer.Deserialize<List<Player>>(cachedData);
-            return Ok(playersFromCache);
-        }
-
-        var players = await _context.Players
-            .AsNoTracking()
-            .ToListAsync();
-
-        var cacheOptions = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
-        };
-
-        await _cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(players), cacheOptions);
-
-        return Ok(players);
+        var result = await _mediator.Send(new GetAllPlayersQuery());
+        return Ok(result);
     }
 
+    [AllowAnonymous]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetPlayerById(Guid id)
     {
-        var player = await _context.Players
-            .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Id == id);
-
-        if (player == null)
-            throw new NotFoundException($"Player with ID {id} was not found");
-
-        return Ok(player);
+        var result = await _mediator.Send(new GetPlayerByIdQuery(id));
+        return Ok(result);
     }
 
+    [AllowAnonymous]
     [HttpPost]
     public async Task<IActionResult> Register([FromBody] RegisterPlayerRequest request)
     {
-        var player = new Player
-        {
-            Username = request.Username,
-            Region = request.Region,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-            Role = request.Username.ToLower() == "alex" ? PlayerRole.Admin : PlayerRole.Player
-        };
-
-        _context.Players.Add(player);
-
-        await _context.SaveChangesAsync();
-
-        return StatusCode(201, player);
+        var command = new RegisterPlayerCommand(request.Username, request.Password, request.Region);
+        var result = await _mediator.Send(command);
+        return StatusCode(201, result);
     }
 
 }

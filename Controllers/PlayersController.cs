@@ -4,7 +4,6 @@ using MatchmakingEngine.DTO;
 using MatchmakingEngine.Application.Queries.Players;
 using MatchmakingEngine.Application.Commands.Players;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Components.Forms;
 
 namespace MatchmakingEngine.Controllers;
 

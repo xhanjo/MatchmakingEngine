@@ -2,7 +2,6 @@
 using MatchmakingEngine.Data;
 using Microsoft.AspNetCore.SignalR;
 using MatchmakingEngine.Hubs;
-using Microsoft.AspNetCore.Components.Forms;
 
 namespace MatchmakingEngine.Services;
 
@@ -13,7 +12,6 @@ public class MatchmakingWorker : BackgroundService
     private readonly ILogger<MatchmakingWorker> _logger;
     private readonly IHubContext<MatchmakingHub> _hubContext;
 
-    private const double MaxMmrDifference = 100.0;
     private const double MaxTrustDifference = 0.3;
     public MatchmakingWorker(
         IMatchmakingQueue queue,
@@ -76,7 +74,7 @@ public class MatchmakingWorker : BackgroundService
 
             var trustDiff = Math.Abs(anchor.TrustFactor - candidateTicket.TrustFactor);
 
-            if (trustDiff <= 0.3)
+            if (trustDiff <= MaxTrustDifference)
             {
                 opponent = candidateTicket;
                 break;
@@ -96,7 +94,6 @@ public class MatchmakingWorker : BackgroundService
         }
 
     }
-
 
     private async Task CreateMatchAndNotifyAsync(MatchmakingTicket p1, MatchmakingTicket p2)
     {

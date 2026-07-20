@@ -36,7 +36,7 @@ public class PlayersController : ControllerBase
     }
 
     [AllowAnonymous]
-    [HttpPost]
+    [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterPlayerRequest request)
     {
         var command = new RegisterPlayerCommand(request.Username, request.Password, request.Region);

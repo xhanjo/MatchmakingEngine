@@ -2,6 +2,7 @@
 using MatchmakingEngine.Data;
 using MatchmakingEngine.Domain;
 using MatchmakingEngine.Domain.Exceptions;
+using MatchmakingEngine.DTO;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Routing.Constraints;
 

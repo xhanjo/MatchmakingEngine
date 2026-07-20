@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MatchmakingEngine.Application.Commands.Matchmaking;
 using MatchmakingEngine.Application.Queries.Matchmaking;
+using MatchmakingEngine.DTO;
 
 namespace MatchmakingEngine.Controllers;
 

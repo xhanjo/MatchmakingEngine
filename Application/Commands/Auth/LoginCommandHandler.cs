@@ -1,4 +1,4 @@
-﻿using BCrypt.Net;
+using BCrypt.Net;
 using MatchmakingEngine.Configuration;
 using MatchmakingEngine.Data;
 using MediatR;

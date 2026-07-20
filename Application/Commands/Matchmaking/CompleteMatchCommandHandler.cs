@@ -62,6 +62,7 @@ public class CompleteMatchCommandHandler : IRequestHandler<CompleteMatchCommand,
         }
         catch
         {
+            await transaction.RollbackAsync(cancellationToken);
             throw;
         }
 

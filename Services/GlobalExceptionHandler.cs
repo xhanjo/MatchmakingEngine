@@ -1,4 +1,4 @@
-﻿using MatchmakingEngine.Domain.Exceptions;
+using MatchmakingEngine.Domain.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 

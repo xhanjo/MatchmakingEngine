@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using StackExchange.Redis;
 using System.Text;
 using Serilog;
+using MatchmakingEngine.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -97,6 +98,8 @@ builder.Services.AddStackExchangeRedisCache(options =>
     options.Configuration = redisConfiguration;
     options.InstanceName = "Matchmaking_";
 });
+
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
 
 var app = builder.Build();
 

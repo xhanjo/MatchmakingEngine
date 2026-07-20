@@ -26,7 +26,7 @@ public class AuthController : ControllerBase
 
         var token = await _mediator.Send(command);
 
-        return Ok(new { Token = token });
+        return Ok(new LoginResponseDto(token));
     }
     
 }

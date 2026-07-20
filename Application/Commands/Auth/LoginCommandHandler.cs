@@ -1,7 +1,9 @@
 ﻿using BCrypt.Net;
+using MatchmakingEngine.Configuration;
 using MatchmakingEngine.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -12,12 +14,12 @@ namespace MatchmakingEngine.Application.Commands.Auth;
 public class LoginCommandHandler : IRequestHandler<LoginCommand, string>
 {
     private readonly MatchmakingDbContext _context;
-    private readonly IConfiguration _config;
+    private readonly JwtSettings _jwtSettings;
 
-    public LoginCommandHandler(MatchmakingDbContext context, IConfiguration config)
+    public LoginCommandHandler(MatchmakingDbContext context, IOptions<JwtSettings> jwtOptions)
     {
         _context = context;
-        _config = config;
+        _jwtSettings = jwtOptions.Value;
     }
 
     public async Task<string> Handle(LoginCommand request, CancellationToken cancellationToken)
@@ -37,12 +39,12 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, string>
             new Claim(ClaimTypes.Role, player.Role.ToString())
         };
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Key!));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
-            issuer: _config["Jwt:Issuer"],
-            audience: _config["Jwt:Audience"],
+            issuer: _jwtSettings.Issuer,
+            audience: _jwtSettings.Audience,
             claims: claims,
             expires: DateTime.UtcNow.AddHours(2),
             signingCredentials: creds

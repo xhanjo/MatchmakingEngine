@@ -100,8 +100,8 @@ public class MatchmakingWorker : BackgroundService
 
     private async Task CreateMatchAndNotifyAsync(MatchmakingTicket p1, MatchmakingTicket p2)
     {
-        _queue.RemovePlayer(p1);
-        _queue.RemovePlayer(p2);
+        await _queue.RemovePlayerAsync(p1);
+        await _queue.RemovePlayerAsync(p2);
 
         var lobbyId = Guid.NewGuid();
         var match = new Match(

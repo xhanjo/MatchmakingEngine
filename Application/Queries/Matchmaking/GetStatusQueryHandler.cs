@@ -45,7 +45,7 @@ public class GetStatusQueryHandler : IRequestHandler<GetStatusQuery, PollingStat
                 );
         }
 
-        if (_queue.IsPlayerInQueue(request.PlayerId))
+        if (await _queue.IsPlayerInQueueAsync(request.PlayerId))
         {
             return new PollingStatusResponseDto(
                 PollingStatus.Searching.ToString()

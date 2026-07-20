@@ -61,7 +61,7 @@ public class MatchmakingWorkerTests
 
         _queueMock.Verify(q => q.EnqueueAsync(It.Is<MatchmakingTicket>(t => t.PlayerId == anchorId)), Times.Once);
 
-        _queueMock.Verify(q => q.RemovePlayer(It.IsAny<MatchmakingTicket>()), Times.Never);
+        _queueMock.Verify(q => q.RemovePlayerAsync(It.IsAny<MatchmakingTicket>()), Times.Never);
     }
 
     [Fact]
@@ -94,8 +94,8 @@ public class MatchmakingWorkerTests
 
         await worker.ProcessEvaluationAsync(anchorId, CancellationToken.None);
 
-        _queueMock.Verify(q => q.RemovePlayer(It.Is<MatchmakingTicket>(t => t.PlayerId == anchorId)), Times.Once);
-        _queueMock.Verify(q => q.RemovePlayer(It.Is<MatchmakingTicket>(t => t.PlayerId == opponentId)), Times.Once);
+        _queueMock.Verify(q => q.RemovePlayerAsync(It.Is<MatchmakingTicket>(t => t.PlayerId == anchorId)), Times.Once);
+        _queueMock.Verify(q => q.RemovePlayerAsync(It.Is<MatchmakingTicket>(t => t.PlayerId == opponentId)), Times.Once);
 
         _queueMock.Verify(q => q.EnqueueAsync(It.IsAny<MatchmakingTicket>()), Times.Never);
 

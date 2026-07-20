@@ -22,7 +22,8 @@ public class GetStatusQueryHandlerTests
         context.Players.Add(player);
         await context.SaveChangesAsync();
 
-        _queueMock.Setup(q => q.IsPlayerInQueue(playerId)).Returns(true);
+        _queueMock.Setup(q => q.IsPlayerInQueueAsync(playerId))
+            .Returns(ValueTask.FromResult(true));
 
         var handler = new GetStatusQueryHandler(context, _queueMock.Object);
         var query = new GetStatusQuery(playerId);
@@ -42,7 +43,8 @@ public class GetStatusQueryHandlerTests
         context.Players.Add(player);
         await context.SaveChangesAsync();
 
-        _queueMock.Setup(q => q.IsPlayerInQueue(playerId)).Returns(false);
+        _queueMock.Setup(q => q.IsPlayerInQueueAsync(playerId))
+            .Returns(ValueTask.FromResult(false));
 
         var handler = new GetStatusQueryHandler(context, _queueMock.Object);
         var query = new GetStatusQuery(playerId);

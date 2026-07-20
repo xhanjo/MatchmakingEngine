@@ -59,17 +59,19 @@ public class MatchmakingQueue : IMatchmakingQueue
         return values.Select(v => Guid.Parse(v.ToString())).ToArray();
     }
 
-    public bool IsPlayerInQueue(Guid playerId)
+    public async ValueTask<bool> IsPlayerInQueueAsync(Guid playerId)
     {
-        return _redisDb.HashExists(ActivePlayersHashKey, playerId.ToString());
+        return await _redisDb.HashExistsAsync(ActivePlayersHashKey, playerId.ToString());
     }
 
-    public void RemovePlayer(MatchmakingTicket ticket)
+    public async ValueTask RemovePlayerAsync(MatchmakingTicket ticket)
     {
         var playerIdStr = ticket.PlayerId.ToString();
         var indexKey = $"mmr_index:{ticket.Region}";
 
-        _redisDb.HashDelete(ActivePlayersHashKey, playerIdStr);
-        _redisDb.SortedSetRemove(indexKey, playerIdStr);
+        var hashTask = _redisDb.HashDeleteAsync(ActivePlayersHashKey, playerIdStr);
+        var setTask = _redisDb.SortedSetRemoveAsync(indexKey, playerIdStr);
+
+        await Task.WhenAll(hashTask, setTask);
     }
 }

@@ -11,6 +11,6 @@ public interface IMatchmakingQueue
 
     ValueTask<Guid[]> GetCandidatesByMmrRangeAsync(PlayerRegion region, double minMmr, double maxMmr);
 
-    bool IsPlayerInQueue(Guid playerId);
-    void RemovePlayer(MatchmakingTicket ticket);
+    ValueTask<bool> IsPlayerInQueueAsync(Guid playerId);
+    ValueTask RemovePlayerAsync(MatchmakingTicket ticket);
 }

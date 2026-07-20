@@ -19,7 +19,7 @@ public class JoinQueueCommandHandler : IRequestHandler<JoinQueueCommand, bool>
     
     public async Task<bool> Handle(JoinQueueCommand request, CancellationToken cancellationToken)
     {
-        if (_matchmakingQueue.IsPlayerInQueue(request.PlayerId)) return true;
+        if (await _matchmakingQueue.IsPlayerInQueueAsync(request.PlayerId)) return true;
 
         var player = await _context.Players.FindAsync(new object[] { request.PlayerId }, cancellationToken);
         if (player == null) return false;

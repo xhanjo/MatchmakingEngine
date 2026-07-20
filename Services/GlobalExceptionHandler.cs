@@ -24,6 +24,7 @@ public class GlobalExceptionHandler : IExceptionHandler
             NotFoundException => (StatusCodes.Status404NotFound, "Resource Not Found"),
             ConflictException => (StatusCodes.Status409Conflict, "State Conflict"),
             ValidationException => (StatusCodes.Status400BadRequest, "Validation Error"),
+            UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "Unauthorized"),
             _ => (StatusCodes.Status500InternalServerError, "Internal Server Error")
         };
 

@@ -32,6 +32,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, string>
         var claims = new[]
         {
             new Claim(ClaimTypes.NameIdentifier, player.Id.ToString()),
+            new Claim("PlayerId", player.Id.ToString()),
             new Claim(ClaimTypes.Name, player.Username),
             new Claim(ClaimTypes.Role, player.Role.ToString())
         };

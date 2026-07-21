@@ -105,7 +105,7 @@ public class MatchmakingWorker : BackgroundService
             Id: lobbyId,
             Player1Id: p1.PlayerId,
             Player2Id: p2.PlayerId,
-            AverageMmr: (p1.Mmr + p2.Mmr) / 2.0,
+            AverageMmr: (p1.Mmr + p2.Mmr) / 2,
             CreatedAt: DateTimeOffset.UtcNow
             );
 

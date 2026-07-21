@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1512
+      POSTGRES_DB: MatchmakingDb
+    ports:
+      - "5432:5432"
+
+  api1:
+    build:
+      context: ./MatchmakingEngine
+      dockerfile: Dockerfile
+    ports:
+      - "5001:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=MatchmakingDb;Username=postgres;Password=1512
+      - Redis__Configuration=redis:6379
+    depends_on:
+      - postgres
+      - redis
+
+  api2:
+    build:
+      context: ./MatchmakingEngine
+      dockerfile: Dockerfile
+    ports:
+      - "5002:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=MatchmakingDb;Username=postgres;Password=1512
+      - Redis__Configuration=redis:6379
+    depends_on:
+      - postgres
+      - redis

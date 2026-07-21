@@ -30,7 +30,7 @@ public class GetAllPlayersQueryHandlerTests : IDisposable
     {
         var cachedPlayers = new List<PlayerResponseDto>
         {
-            new PlayerResponseDto(Guid.NewGuid(), "CachedUser", 1000.0, 0.5, Domain.PlayerRegion.NaEast, Domain.PlayerRole.Player, DateTimeOffset.UtcNow )
+            new PlayerResponseDto(Guid.NewGuid(), "CachedUser", 1000, 0.5, Domain.PlayerRegion.NaEast, Domain.PlayerRole.Player, DateTimeOffset.UtcNow )
         };
         var serializedCache = JsonSerializer.Serialize(cachedPlayers);
         var cachedBytes = Encoding.UTF8.GetBytes(serializedCache);

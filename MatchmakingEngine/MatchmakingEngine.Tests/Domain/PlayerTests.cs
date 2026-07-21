@@ -15,7 +15,7 @@ public class PlayerTests
             Mmr = 10.0
         };
 
-        player.RecordLoss(mmrChange: 25.0);
+        player.RecordLoss(MmrChange: 25.0);
 
         player.Mmr.Should().Be(0);
     }
@@ -25,7 +25,7 @@ public class PlayerTests
     {
         var player = new Player { Mmr = 1000.0 };
 
-        player.RecordWin(mmrChange: 25.0);
+        player.RecordWin(MmrChange: 25.0);
 
         player.Mmr.Should().Be(1025.0);
     }
@@ -35,7 +35,7 @@ public class PlayerTests
     {
         var player = new Player { Mmr = 1000.0 };
 
-        player.RecordLoss(mmrChange: 25.0);
+        player.RecordLoss(MmrChange: 25.0);
         
         player.Mmr.Should().Be(975.0);
     }

@@ -1,6 +1,6 @@
 ﻿using BCrypt.Net;
 using MatchmakingEngine.Application.Commands.Auth;
-using MatchmakingEngine.Configuration;
+using MatchmakingEngine.Application.Configuration;
 using MatchmakingEngine.Data;
 using MatchmakingEngine.Domain;
 using MatchmakingEngine.Tests.Helpers;

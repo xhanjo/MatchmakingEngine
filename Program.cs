@@ -2,13 +2,14 @@ using FluentValidation;
 using MatchmakingEngine.Data;
 using MatchmakingEngine.Hubs;
 using MatchmakingEngine.Services;
+using MatchmakingEngine.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using StackExchange.Redis;
 using System.Text;
 using Serilog;
-using MatchmakingEngine.Configuration;
+using MatchmakingEngine.Application.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 

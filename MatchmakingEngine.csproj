@@ -20,15 +20,22 @@
 		</PackageReference>
 		<PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.10" />
 		<PackageReference Include="Microsoft.OpenApi" Version="2.7.5" />
-		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.2" />
 		<PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
-		<PackageReference Include="StackExchange.Redis" Version="3.0.11" />
 		<PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
 		<Compile Remove="MatchmakingEngine.Tests\**" />
 		<Content Remove="MatchmakingEngine.Tests\**" />
 		<EmbeddedResource Remove="MatchmakingEngine.Tests\**" />
 		<None Remove="MatchmakingEngine.Tests\**" />
 		<InternalsVisibleTo Include="MatchmakingEngine.Tests" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\MatchmakingEngine.Application\MatchmakingEngine.Application.csproj" />
+	  <ProjectReference Include="..\MatchmakingEngine.Infrastructure\MatchmakingEngine.Infrastructure.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Domain\" />
 	</ItemGroup>
 
 </Project>

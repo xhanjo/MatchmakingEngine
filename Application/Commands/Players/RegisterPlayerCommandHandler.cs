@@ -4,6 +4,7 @@ using MatchmakingEngine.Domain;
 using MatchmakingEngine.Data;
 using BCrypt.Net;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.EntityFrameworkCore;
 
 namespace MatchmakingEngine.Application.Commands.Players;
 
@@ -20,6 +21,9 @@ public class RegisterPlayerCommandHandler : IRequestHandler<RegisterPlayerComman
 
     public async Task<PlayerResponseDto> Handle(RegisterPlayerCommand request, CancellationToken cancellationToken)
     {
+        if (await _context.Players.AnyAsync(p => p.Username == request.Username, cancellationToken))
+            throw new InvalidOperationException($"Username '{request.Username}' is already taken.");
+
         var player = new Player
         {
             Username = request.Username,

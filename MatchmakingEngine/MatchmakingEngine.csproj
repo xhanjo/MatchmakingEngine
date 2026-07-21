@@ -34,8 +34,4 @@
 	  <ProjectReference Include="..\MatchmakingEngine.Infrastructure\MatchmakingEngine.Infrastructure.csproj" />
 	</ItemGroup>
 
-	<ItemGroup>
-	  <Folder Include="Domain\" />
-	</ItemGroup>
-
 </Project>

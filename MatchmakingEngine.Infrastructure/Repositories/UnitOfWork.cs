@@ -1,14 +1,14 @@
-﻿using MatchmakingEngine.Application.Interfaces.Repositories;
-using MatchmakingEngine.Application.Interfaces;
+﻿using MatchmakingEngine.Application.Interfaces;
+using MatchmakingEngine.Application.Interfaces.Repositories;
+using MatchmakingEngine.Data;
 
 namespace MatchmakingEngine.Infrastructure.Repositories;
 
 
 public class UnitOfWork : IUnitOfWork
 {
-    private readonly IMatchmakingDbContext _context;
-
-    public UnitOfWork(IMatchmakingDbContext context)
+    private readonly MatchmakingDbContext _context;
+    public UnitOfWork(MatchmakingDbContext context)
     {
         _context = context;
     }

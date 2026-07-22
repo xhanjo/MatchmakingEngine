@@ -1,15 +1,15 @@
-﻿using MatchmakingEngine.Domain;
-using Microsoft.EntityFrameworkCore;
+﻿using MatchmakingEngine.Application.Interfaces;
 using MatchmakingEngine.Application.Interfaces.Repositories;
-using MatchmakingEngine.Application.Interfaces;
+using MatchmakingEngine.Data;
+using MatchmakingEngine.Domain;
+using Microsoft.EntityFrameworkCore;
 
 namespace MatchmakingEngine.Infrastructure.Repositories;
 
 public class PlayerRepository : IPlayerRepository
 {
-    private readonly IMatchmakingDbContext _context;
-
-    public PlayerRepository(IMatchmakingDbContext context)
+    private readonly MatchmakingDbContext _context;
+    public PlayerRepository(MatchmakingDbContext context)
     {
         _context = context;
     }

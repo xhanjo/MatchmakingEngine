@@ -1,30 +1,33 @@
 ﻿using MediatR;
-using MatchmakingEngine.Services;
 using MatchmakingEngine.Domain;
 using MatchmakingEngine.DTO;
-using Microsoft.EntityFrameworkCore;
 using MatchmakingEngine.Domain.Exceptions;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion.Internal;
-using MatchmakingEngine.Application.Interfaces;
 using Microsoft.Extensions.Logging;
+using MatchmakingEngine.Application.Interfaces.Repositories;
 
 
 namespace MatchmakingEngine.Application.Commands.Matchmaking;
 
 public class AcceptMatchCommandHandler : IRequestHandler<AcceptMatchCommand, AcceptMatchResult>
 {
-    private readonly IMatchmakingDbContext _context;
+    private readonly IMatchRepository _matchRepository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<AcceptMatchCommandHandler> _logger;
 
-    public AcceptMatchCommandHandler(IMatchmakingDbContext context, ILogger<AcceptMatchCommandHandler> logger)
+    public AcceptMatchCommandHandler(
+        IMatchRepository matchRepository,
+        IUnitOfWork unitOfWork,
+        ILogger<AcceptMatchCommandHandler> logger)
     {
-        _context = context;
+        _matchRepository = matchRepository;
+        _unitOfWork = unitOfWork;
         _logger = logger;
     }
 
     public async Task<AcceptMatchResult> Handle(AcceptMatchCommand request, CancellationToken cancellationToken)
     {
-        var match = await _context.Matches.FindAsync(new object[] { request.MatchId }, cancellationToken);
+        var match = await _matchRepository.GetByIdWithPlayersAsync(request.MatchId, trackChanges: true);
+
         if (match == null)
             throw new NotFoundException($"Match with ID {request.MatchId} was not found.");
 
@@ -45,7 +48,7 @@ public class AcceptMatchCommandHandler : IRequestHandler<AcceptMatchCommand, Acc
             _logger.LogInformation("[GAME START] All player accepted! Match {MatchId} is starting!", match.Id);
         }
 
-        await _context.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         string statusMesage = match.Status == MatchStatus.Accepted ? "Match Started" : "Waiting for other player";
 
@@ -54,6 +57,6 @@ public class AcceptMatchCommandHandler : IRequestHandler<AcceptMatchCommand, Acc
             match.Player1Accepted,
             match.Player2Accepted,
             match.Status
-            );
+        );
     }
 }

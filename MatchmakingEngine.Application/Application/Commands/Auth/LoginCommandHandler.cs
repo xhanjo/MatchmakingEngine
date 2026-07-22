@@ -1,8 +1,7 @@
 using BCrypt.Net;
-using MatchmakingEngine.Application.Interfaces;
 using MatchmakingEngine.Application.Configuration;
+using MatchmakingEngine.Application.Interfaces.Repositories;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -13,20 +12,18 @@ namespace MatchmakingEngine.Application.Commands.Auth;
 
 public class LoginCommandHandler : IRequestHandler<LoginCommand, string>
 {
-    private readonly IMatchmakingDbContext _context;
+    private readonly IPlayerRepository _playerRepository;
     private readonly JwtSettings _jwtSettings;
 
-    public LoginCommandHandler(IMatchmakingDbContext context, IOptions<JwtSettings> jwtOptions)
+    public LoginCommandHandler(IPlayerRepository playerRepository, IOptions<JwtSettings> jwtOptions)
     {
-        _context = context;
+        _playerRepository = playerRepository;
         _jwtSettings = jwtOptions.Value;
     }
 
     public async Task<string> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
-        var player = await _context.Players
-            .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Username == request.Username, cancellationToken);
+        var player = await _playerRepository.GetByUsernameAsync(request.Username);
 
         if (player == null || !BCrypt.Net.BCrypt.Verify(request.Password, player.PasswordHash))
             throw new UnauthorizedAccessException("Invalid credentials");

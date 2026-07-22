@@ -1,7 +1,5 @@
 ﻿using FluentValidation;
-using MatchmakingEngine.Domain.Exceptions;
 using MediatR;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 using ValidationException = MatchmakingEngine.Domain.Exceptions.ValidationException;
 
 namespace MatchmakingEngine.Application.Behaviors;

@@ -1,9 +1,6 @@
 ﻿using MatchmakingEngine.Application.Interfaces;
+using MatchmakingEngine.Application.Interfaces.Repositories;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace MatchmakingEngine.Application.Application.Queries.MatchHistory;
 
@@ -15,20 +12,15 @@ public class GetMatchHistoryQuery : IRequest<List<MatchDto>>
 
 public class GetMatchHistoryQueryHandler : IRequestHandler<GetMatchHistoryQuery, List<MatchDto>>
 {
-    private readonly IMatchmakingDbContext _context;
+    private readonly IMatchRepository _matchRepository;
 
-    public GetMatchHistoryQueryHandler(IMatchmakingDbContext context)
+    public GetMatchHistoryQueryHandler(IMatchRepository matchRepository)
     {
-        _context = context;
+        _matchRepository = matchRepository;
     }
     public async Task<List<MatchDto>> Handle(GetMatchHistoryQuery request, CancellationToken cancellationToken)
     {
-        var matches = await _context.Matches
-            .AsNoTracking()
-            .Include(m => m.Player1)
-            .Include(m => m.Player2)
-            .Where(m => m.Player1Id == request.PlayerId || m.Player2Id == request.PlayerId)
-            .ToListAsync(cancellationToken);
+        var matches = await _matchRepository.GetMatchHistoryByPlayerIdAsync(request.PlayerId, trackChanges: false);
 
         var dtos = matches.Select(m => new MatchDto(
                 m.Id,

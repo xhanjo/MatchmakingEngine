@@ -2,31 +2,25 @@ using MediatR;
 using MatchmakingEngine.DTO;
 using MatchmakingEngine.Domain;
 using MatchmakingEngine.Services;
-using Microsoft.EntityFrameworkCore;
 using MatchmakingEngine.Application.Interfaces;
+using MatchmakingEngine.Application.Interfaces.Repositories;
 
 namespace MatchmakingEngine.Application.Queries.Matchmaking;
 
 public class GetStatusQueryHandler : IRequestHandler<GetStatusQuery, PollingStatusResponseDto>
 {
-    private readonly IMatchmakingDbContext _context;
+    private readonly IMatchRepository _matchRepository;
     private readonly IMatchmakingQueue _queue;
 
-    public GetStatusQueryHandler(IMatchmakingDbContext context, IMatchmakingQueue queue)
+    public GetStatusQueryHandler(IMatchRepository matchRepository, IMatchmakingQueue queue)
     {
-        _context = context;
+        _matchRepository = matchRepository;
         _queue = queue;   
     }
 
     public async Task<PollingStatusResponseDto> Handle(GetStatusQuery request, CancellationToken cancellationToken)
     {
-        var match = await _context.Matches
-            .AsNoTracking()
-            .Where(m => (m.Player1Id == request.PlayerId || m.Player2Id == request.PlayerId)
-            && m.Status != MatchStatus.Finished
-            && m.Status != MatchStatus.Canceled)
-            .OrderByDescending(m => m.CreatedAt)
-            .FirstOrDefaultAsync(cancellationToken);
+        var match = await _matchRepository.GetActiveMatchByPlayerIdAsync(request.PlayerId, trackChanges: false);
     
         if (match != null)
         {

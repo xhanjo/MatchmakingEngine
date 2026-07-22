@@ -1,29 +1,29 @@
-﻿using MediatR;
-using MatchmakingEngine.Application.Configuration;
-using MatchmakingEngine.Services;
+﻿using MatchmakingEngine.Application.Interfaces.Repositories;
 using MatchmakingEngine.Domain;
-using Microsoft.EntityFrameworkCore;
-using MatchmakingEngine.Application.Interfaces;
+using MatchmakingEngine.Services;
+using MediatR;
 
 namespace MatchmakingEngine.Application.Commands.Matchmaking;
 
 public class JoinQueueCommandHandler : IRequestHandler<JoinQueueCommand, bool>
 {
-    private readonly IMatchmakingDbContext _context;
+    private readonly IPlayerRepository _playerRepository;
     private readonly IMatchmakingQueue _matchmakingQueue;
 
-    public JoinQueueCommandHandler(IMatchmakingDbContext context, IMatchmakingQueue matchmakingQueue)
+    public JoinQueueCommandHandler(IPlayerRepository playerRepository, IMatchmakingQueue matchmakingQueue)
     {
-        _context = context;
+        _playerRepository = playerRepository;
         _matchmakingQueue = matchmakingQueue;
     }
-    
+
     public async Task<bool> Handle(JoinQueueCommand request, CancellationToken cancellationToken)
     {
-        if (await _matchmakingQueue.IsPlayerInQueueAsync(request.PlayerId)) return true;
+        if (await _matchmakingQueue.IsPlayerInQueueAsync(request.PlayerId))
+            return true;
 
-        var player = await _context.Players.FindAsync(new object[] { request.PlayerId }, cancellationToken);
-        if (player == null) return false;
+        var player = await _playerRepository.GetByIdAsync(request.PlayerId, trackChanges: false);
+        if (player == null)
+            return false;
 
         var ticket = new MatchmakingTicket
         (

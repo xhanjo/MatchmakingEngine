@@ -1,6 +1,4 @@
 ﻿using FluentValidation;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
-using System.Data;
 
 namespace MatchmakingEngine.Application.Commands.Auth;
 

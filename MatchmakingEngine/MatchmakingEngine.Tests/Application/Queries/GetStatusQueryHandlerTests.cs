@@ -1,8 +1,8 @@
 ﻿using FluentAssertions;
 using MatchmakingEngine.Application.Queries.Matchmaking;
+using MatchmakingEngine.Application.Interfaces.Repositories;
 using MatchmakingEngine.Domain;
 using MatchmakingEngine.Services;
-using MatchmakingEngine.Tests.Helpers;
 using Moq;
 using Xunit;
 
@@ -10,22 +10,22 @@ namespace MatchmakingEngine.Tests.Application.Queries;
 
 public class GetStatusQueryHandlerTests
 {
+    private readonly Mock<IMatchRepository> _matchRepoMock = new();
     private readonly Mock<IMatchmakingQueue> _queueMock = new();
 
     [Fact]
     public async Task Handle_PlayerInQueue_ShouldReturnSearchingStatus()
     {
-        using var context = TestDbContextFactory.Create();
         var playerId = Guid.NewGuid();
 
-        var player = new Player { Id = playerId , Username = "TestPlayer", Mmr = 1000};
-        context.Players.Add(player);
-        await context.SaveChangesAsync();
+        _matchRepoMock.Setup(x => x.GetActiveMatchByPlayerIdAsync(playerId, false))
+            .ReturnsAsync((Domain.Match?)null);
+
 
         _queueMock.Setup(q => q.IsPlayerInQueueAsync(playerId))
-            .Returns(ValueTask.FromResult(true));
+            .ReturnsAsync(true);
 
-        var handler = new GetStatusQueryHandler(context, _queueMock.Object);
+        var handler = new GetStatusQueryHandler(_matchRepoMock.Object, _queueMock.Object);
         var query = new GetStatusQuery(playerId);
 
         var result = await handler.Handle(query, CancellationToken.None);
@@ -36,18 +36,18 @@ public class GetStatusQueryHandlerTests
     [Fact]
     public async Task Handle_PlayerNotInQueueAndNoMatch_ShouldReturnIdle()
     {
-        using var context = TestDbContextFactory.Create();
         var playerId = Guid.NewGuid();
 
-        var player = new Player { Id = playerId, Username = "TestPlayer", Mmr = 1000 };
-        context.Players.Add(player);
-        await context.SaveChangesAsync();
+        _matchRepoMock.Setup(x => x.GetActiveMatchByPlayerIdAsync(playerId, false))
+            .ReturnsAsync((Domain.Match?)null);
+
 
         _queueMock.Setup(q => q.IsPlayerInQueueAsync(playerId))
-            .Returns(ValueTask.FromResult(false));
+            .ReturnsAsync(false);
 
-        var handler = new GetStatusQueryHandler(context, _queueMock.Object);
+        var handler = new GetStatusQueryHandler(_matchRepoMock.Object, _queueMock.Object);
         var query = new GetStatusQuery(playerId);
+
 
         var result = await handler.Handle(query, CancellationToken.None);
 

@@ -1,28 +1,25 @@
 ﻿using MatchmakingEngine.Application.Queries.Players;
-using MatchmakingEngine.Data;
+using MatchmakingEngine.Application.Interfaces.Repositories;
 using MatchmakingEngine.DTO;
-using MatchmakingEngine.Tests.Helpers;
-using Microsoft.AspNetCore.Razor.Hosting;
 using Microsoft.Extensions.Caching.Distributed;
 using Moq;
-using System;
-using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
+using Xunit;
 
 namespace MatchmakingEngine.Tests.Application.Commands.Auth;
 
-public class GetAllPlayersQueryHandlerTests : IDisposable
+public class GetAllPlayersQueryHandlerTests
 {
-    private readonly MatchmakingDbContext _context;
+    private readonly Mock<IPlayerRepository> _playerRepoMock;
     private readonly Mock<IDistributedCache> _cacheMock;
     private readonly GetAllPlayersQueryHandler _handler;
 
     public GetAllPlayersQueryHandlerTests()
     {
-        _context = TestDbContextFactory.Create();
+        _playerRepoMock = new Mock<IPlayerRepository>();
         _cacheMock = new Mock<IDistributedCache>();
-        _handler = new GetAllPlayersQueryHandler(_context, _cacheMock.Object);
+        _handler = new GetAllPlayersQueryHandler(_playerRepoMock.Object, _cacheMock.Object);
     }
 
     [Fact]
@@ -44,7 +41,8 @@ public class GetAllPlayersQueryHandlerTests : IDisposable
 
         Assert.Single(result);
         Assert.Equal("CachedUser", result.First().Username);
-        Assert.Empty(_context.Players);
+
+        _playerRepoMock.Verify(x => x.GetAllAsync(It.IsAny<bool>()), Times.Never);
     }
 
     [Fact]
@@ -53,8 +51,12 @@ public class GetAllPlayersQueryHandlerTests : IDisposable
         _cacheMock.Setup(x => x.GetAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((byte[]?)null);
 
-        _context.Players.Add(new Domain.Player { Id =  Guid.NewGuid(), Username = "DbUser", PasswordHash = "hash"});
-        await _context.SaveChangesAsync();
+        var dbPlayers = new List<Domain.Player>
+        {
+            new Domain.Player { Id = Guid.NewGuid(), Username = "DbUser", PasswordHash = "hash" }
+        };
+
+        _playerRepoMock.Setup(x => x.GetAllAsync(false)).ReturnsAsync(dbPlayers);
 
         var query = new GetAllPlayersQuery();
 
@@ -69,11 +71,5 @@ public class GetAllPlayersQueryHandlerTests : IDisposable
          It.IsAny<DistributedCacheEntryOptions>(),
          It.IsAny<CancellationToken>()),
          Times.Once);
-    }
-
-    public void Dispose()
-    {
-        _context.Database.EnsureDeleted();
-        _context.Dispose();
     }
 }

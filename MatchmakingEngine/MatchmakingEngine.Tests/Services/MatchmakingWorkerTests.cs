@@ -38,7 +38,7 @@ public class MatchmakingWorkerTests
             Guid.NewGuid(),
             anchorId,
             "TestPlayer",
-            1000.0,
+            1000,
             0.5,
             PlayerRegion.EuWest,
             DateTimeOffset.UtcNow
@@ -70,8 +70,8 @@ public class MatchmakingWorkerTests
         var anchorId = Guid.NewGuid();
         var opponentId = Guid.NewGuid();
 
-        var anchorTicket = new MatchmakingTicket(Guid.NewGuid(), anchorId, "Player1", 1000.0, 0.5, PlayerRegion.EuWest, DateTimeOffset.UtcNow);
-        var opponentTicket = new MatchmakingTicket(Guid.NewGuid(), opponentId, "Player2", 1000.0, 0.5, PlayerRegion.EuWest, DateTimeOffset.UtcNow);
+        var anchorTicket = new MatchmakingTicket(Guid.NewGuid(), anchorId, "Player1", 1000, 0.5, PlayerRegion.EuWest, DateTimeOffset.UtcNow);
+        var opponentTicket = new MatchmakingTicket(Guid.NewGuid(), opponentId, "Player2", 1000, 0.5, PlayerRegion.EuWest, DateTimeOffset.UtcNow);
 
         _queueMock.Setup(q => q.GetTicketAsync(anchorId)).ReturnsAsync(anchorTicket);
         _queueMock.Setup(q => q.GetTicketAsync(opponentId)).ReturnsAsync(opponentTicket);

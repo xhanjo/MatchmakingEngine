@@ -1,26 +1,22 @@
-﻿using BCrypt.Net;
-using MatchmakingEngine.Application.Commands.Auth;
+﻿using MatchmakingEngine.Application.Commands.Auth;
 using MatchmakingEngine.Application.Configuration;
-using MatchmakingEngine.Data;
+using MatchmakingEngine.Application.Interfaces.Repositories;
 using MatchmakingEngine.Domain;
-using MatchmakingEngine.Tests.Helpers;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.Extensions.Options;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using Moq;
+using Xunit;
 
 namespace MatchmakingEngine.Tests.Application.Commands.Auth;
 
-public class LoginCommandHandlerTests : IDisposable
+public class LoginCommandHandlerTests
 {
-    private readonly MatchmakingDbContext _context;
+    private readonly Mock<IPlayerRepository> _playerRepoMock;
     private readonly IOptions<JwtSettings> _jwtSettings;
     private readonly LoginCommandHandler _handler;
 
     public LoginCommandHandlerTests()
     {
-        _context = TestDbContextFactory.Create();
+        _playerRepoMock = new Mock<IPlayerRepository>();
 
         _jwtSettings = Options.Create(new JwtSettings
         {
@@ -29,7 +25,7 @@ public class LoginCommandHandlerTests : IDisposable
             Audience = "TestAudience"
         });
 
-        _handler = new LoginCommandHandler(_context, _jwtSettings);
+        _handler = new LoginCommandHandler(_playerRepoMock.Object, _jwtSettings);
     }
 
     [Fact]
@@ -38,8 +34,8 @@ public class LoginCommandHandlerTests : IDisposable
         var password = "SecurePassword123";
         var hash = BCrypt.Net.BCrypt.HashPassword(password);
         var player = new Player { Id = Guid.NewGuid(), Username = "TestUser", PasswordHash = hash };
-        _context.Players.Add(player);
-        await _context.SaveChangesAsync();
+
+        _playerRepoMock.Setup(x => x.GetByUsernameAsync("TestUser", false)).ReturnsAsync(player);
 
         var command = new LoginCommand("TestUser", password);
 
@@ -53,8 +49,7 @@ public class LoginCommandHandlerTests : IDisposable
     public async Task Handle_InvalidPassword_ThrowsUnauthorizedAccessException()
     {
         var player = new Player { Id = Guid.NewGuid(), Username = "TestUser", PasswordHash = BCrypt.Net.BCrypt.HashPassword("CorrectPassword") };
-        _context.Players.Add(player);
-        await _context.SaveChangesAsync();
+        _playerRepoMock.Setup(x => x.GetByUsernameAsync("TestUser", false)).ReturnsAsync(player);
 
         var command = new LoginCommand("TestUser", "WrongPassword");
 
@@ -64,14 +59,10 @@ public class LoginCommandHandlerTests : IDisposable
     [Fact]
     public async Task Handle_UnknownUsername_ThrowsUnauthorizedAccessException()
     {
+        _playerRepoMock.Setup(x => x.GetByUsernameAsync("UnknownUser", false)).ReturnsAsync((Player?)null);
+
         var command = new LoginCommand("UnknownUser", "AnyPassword");
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _handler.Handle(command, CancellationToken.None));
-    }
-
-    public void Dispose()
-    {
-        _context.Database.EnsureDeleted();
-        _context.Dispose();
     }
 }

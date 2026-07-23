@@ -1,5 +1,5 @@
 ﻿using MatchmakingEngine.Domain;
-using MatchmakingEngine.Data;
+using MatchmakingEngine.Application.Interfaces.Repositories;
 using Microsoft.AspNetCore.SignalR;
 using MatchmakingEngine.Hubs;
 
@@ -111,9 +111,11 @@ public class MatchmakingWorker : BackgroundService
 
         using (var scope = _scopeFactory.CreateScope())
         {
-            var dbContext = scope.ServiceProvider.GetRequiredService<MatchmakingDbContext>();
-            dbContext.Matches.Add(match);
-            await dbContext.SaveChangesAsync();
+            var matchRepo = scope.ServiceProvider.GetRequiredService<IMatchRepository>();
+            var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+
+            await matchRepo.AddAsync(match);
+            await unitOfWork.SaveChangesAsync(CancellationToken.None);
         }
 
         var matchPayload = new { LobbyId = lobbyId, AverageMmr = match.AverageMmr };

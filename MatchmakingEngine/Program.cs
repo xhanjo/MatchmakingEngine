@@ -1,5 +1,6 @@
 using FluentValidation;
 using MatchmakingEngine.Application.Configuration;
+using MatchmakingEngine.Application.Interfaces;
 using MatchmakingEngine.Application.Interfaces.Repositories;
 using MatchmakingEngine.Data;
 using MatchmakingEngine.Hubs;
@@ -82,6 +83,9 @@ var redisConfiguration = builder.Configuration["Redis:Configuration"]
     ?? throw new InvalidOperationException("Redis:Configuration is missing in appsettings.json.");
 
 builder.Services.AddSignalR().AddStackExchangeRedis(redisConfiguration);
+builder.Services.AddMemoryCache();
+
+builder.Services.AddSingleton<ICacheService, TwoLevelCacheService>();
 
 builder.Services.AddSingleton<IConnectionMultiplexer>(
     ConnectionMultiplexer.Connect(redisConfiguration)

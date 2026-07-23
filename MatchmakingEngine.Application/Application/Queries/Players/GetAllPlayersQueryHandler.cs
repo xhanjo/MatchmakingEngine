@@ -1,7 +1,5 @@
 ﻿using MediatR;
 using MatchmakingEngine.DTO;
-using Microsoft.Extensions.Caching.Distributed;
-using System.Text.Json;
 using MatchmakingEngine.Application.Interfaces;
 using MatchmakingEngine.Application.Interfaces.Repositories;
 
@@ -10,35 +8,28 @@ namespace MatchmakingEngine.Application.Queries.Players;
 public class GetAllPlayersQueryHandler : IRequestHandler<GetAllPlayersQuery, List<PlayerResponseDto>>
 {
     private readonly IPlayerRepository _playerRepository;
-    private readonly IDistributedCache _cache;
+    private readonly ICacheService _cacheService;
 
-    public GetAllPlayersQueryHandler(IPlayerRepository playerRepository, IDistributedCache cache)
+    public GetAllPlayersQueryHandler(IPlayerRepository playerRepository, ICacheService cacheService)
     {
         _playerRepository = playerRepository;
-        _cache = cache;
+        _cacheService = cacheService;
     }
 
     public async Task<List<PlayerResponseDto>> Handle(GetAllPlayersQuery request, CancellationToken cancellationToken)
     {
-        string cacheKey = "all_players";
-        var cachedData = await _cache.GetStringAsync(cacheKey, cancellationToken);
+        var cachedPlayers = await _cacheService.GetOrCreateAsync(
+            key: "all_players",
+            factory: async () =>
+            {
+                var players = await _playerRepository.GetAllAsync(trackChanges: false);
+                return players.Select(p => new PlayerResponseDto(
+                    p.Id, p.Username, p.Mmr, p.TrustFactor, p.Region, p.Role, p.CreatedAt
+                    )).ToList();
+            }, 
+            expirationTime: TimeSpan.FromMinutes(5)
+            );
 
-        if (!string.IsNullOrEmpty(cachedData))
-            return JsonSerializer.Deserialize<List<PlayerResponseDto>>(cachedData) ?? new List<PlayerResponseDto>();
-
-        var players = await _playerRepository.GetAllAsync(trackChanges: false);
-
-        var dtos = players.Select(p => new PlayerResponseDto(
-            p.Id, p.Username, p.Mmr, p.TrustFactor, p.Region, p.Role, p.CreatedAt
-            )).ToList();
-
-        var cachedOptions = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
-        };
-
-        await _cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(dtos), cachedOptions, cancellationToken);
-
-        return dtos;
+        return cachedPlayers ?? new List<PlayerResponseDto>();
     }
 }

@@ -12,16 +12,16 @@ public class RegisterPlayerCommandHandler : IRequestHandler<RegisterPlayerComman
 {
     private readonly IPlayerRepository _playerRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IDistributedCache _cache;
+    private readonly ICacheService _cacheService;
 
     public RegisterPlayerCommandHandler(
         IPlayerRepository playerRepository,
         IUnitOfWork unitOfWork,
-        IDistributedCache cache)
+        ICacheService cacheService)
     {
         _playerRepository = playerRepository;
         _unitOfWork = unitOfWork;
-        _cache = cache;
+        _cacheService = cacheService;
     }
 
     public async Task<PlayerResponseDto> Handle(RegisterPlayerCommand request, CancellationToken cancellationToken)
@@ -43,7 +43,7 @@ public class RegisterPlayerCommandHandler : IRequestHandler<RegisterPlayerComman
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        await _cache.RemoveAsync("all_players", cancellationToken);
+        await _cacheService.RemoveAsync("all_players", cancellationToken);
 
         return new PlayerResponseDto(
             player.Id, player.Username, player.Mmr, player.TrustFactor, player.Region, player.Role, player.CreatedAt

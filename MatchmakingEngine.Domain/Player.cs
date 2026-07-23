@@ -1,8 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using MatchmakingEngine.Domain.Common;
+using MatchmakingEngine.Domain.Events;
 
 namespace MatchmakingEngine.Domain;
 
-public class Player
+public class Player : Entity
 {
     public Guid Id { get; set; } = Guid.NewGuid();
 
@@ -28,10 +30,16 @@ public class Player
 
     public void RecordWin(int MmrChange)
     {
+        int oldMmr = Mmr;
         Mmr += MmrChange;
+
+        AddDomainEvents(new PlayerMmrChangedEvent(Id, oldMmr, Mmr));
     }
     public void RecordLoss(int MmrChange)
     {
+        int oldMmr = Mmr;
         Mmr = Math.Max(0, Mmr - MmrChange);
+
+        AddDomainEvents(new PlayerMmrChangedEvent(Id, oldMmr, Mmr));
     }
 }

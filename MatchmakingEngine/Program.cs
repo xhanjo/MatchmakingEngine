@@ -97,6 +97,10 @@ builder.Services.AddHostedService<MatchmakingWorker>();
 var dbConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("DefaultConnection string is missing.");
 
+builder.Services.AddHealthChecks()
+    .AddNpgSql(dbConnectionString, name: "PostgreSQL")
+    .AddRedis(redisConfiguration, name: "Redis");
+
 builder.Services.AddDbContext<MatchmakingDbContext>(options =>
     options.UseNpgsql(dbConnectionString)
 );
@@ -128,6 +132,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHub<MatchmakingHub>("/hubs/matchmaking");
+
+app.MapHealthChecks("/health");
 
 
 using (var scope = app.Services.CreateScope())

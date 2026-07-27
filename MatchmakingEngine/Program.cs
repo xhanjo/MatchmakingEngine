@@ -108,8 +108,13 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(
 );
 
 builder.Services.AddSingleton<IMatchmakingQueue, MatchmakingQueue>();
-builder.Services.AddHostedService<MatchmakingWorker>();
-builder.Services.AddHostedService<MatchCleanupWorker>();
+
+var runWorker = builder.Configuration.GetValue<bool>("RunMatchmakingWorker", true);
+if (runWorker)
+{
+    builder.Services.AddHostedService<MatchmakingWorker>();
+    builder.Services.AddHostedService<MatchCleanupWorker>();
+}
 
 var dbConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("DefaultConnection string is missing.");

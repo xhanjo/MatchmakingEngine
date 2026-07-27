@@ -40,7 +40,8 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=MatchmakingDb;Username=postgres;Password=1512
       - Redis__Configuration=redis:6379
-      - Jwt__Key=ThisIsMySuperSecretKeyForJwtTokens123! 
+      - Jwt__Key=ThisIsMySuperSecretKeyForJwtTokens123!
+      - RunMatchmakingWorker=false 
     depends_on:
       - postgres
       - redis

@@ -1,10 +1,12 @@
-﻿using MediatR;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using MatchmakingEngine.Application.Application.Commands.Matchmaking;
 using MatchmakingEngine.Application.Commands.Matchmaking;
 using MatchmakingEngine.Application.Queries.Matchmaking;
 using MatchmakingEngine.DTO;
-using MatchmakingEngine.Application.Application.Commands.Matchmaking;
+using MatchmakingEngine.Hubs;
+using MediatR;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 
 namespace MatchmakingEngine.Controllers;
 
@@ -14,9 +16,12 @@ namespace MatchmakingEngine.Controllers;
 public class MatchmakingController : ControllerBase
 {
     private readonly IMediator _mediator;
-    public MatchmakingController(IMediator mediator)
+    private readonly IHubContext<MatchmakingHub> _hubContext;
+
+    public MatchmakingController(IMediator mediator, IHubContext<MatchmakingHub> hubContext)
     {
         _mediator = mediator;
+        _hubContext = hubContext;
     }
 
     [HttpPost("join")]
@@ -59,6 +64,23 @@ public class MatchmakingController : ControllerBase
 
         return Ok(result);
     }
+
+    [HttpPost("decline/{matchId}")]
+    public async Task<IActionResult> DeclineMatch(Guid matchId)
+    {
+        var playerIdStr = User.FindFirst("PlayerId")?.Value;
+        if (!Guid.TryParse(playerIdStr, out var playerId))
+            return Unauthorized();
+
+        var result = await _mediator.Send(new DeclineMatchCommand(matchId, playerId));
+        if (!result)
+            return BadRequest("Cannot decline match.");
+
+        await _hubContext.Clients.Group(matchId.ToString()).SendAsync("MatchCanceled");
+        
+        return Ok();
+    }
+
 
     [Authorize(Roles = "Admin")]
     [HttpPost("complete/{matchId}")]

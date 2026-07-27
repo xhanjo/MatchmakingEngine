@@ -236,8 +236,35 @@ function startSignalR() {
         acceptBtn.innerText = "ПРИЙНЯТИ";
         acceptBtn.className = "success-btn";
     });
+    hubConnection.on("MatchCanceled", () => {
+        matchModal.classList.remove("active");
+        resetMatchUI();
+        alert("Матч було відхилено або час очікування вийшов.");
+    });
     
     hubConnection.start().catch(err => console.error("SignalR Connection Error: ", err));
+}
+
+function resetMatchUI() {
+    matchStatus.className = "status-text";
+    matchStatus.style.color = "";
+    matchStatus.innerText = "Готовий до гри";
+    lobbyHint.innerText = "Натисніть кнопку вище, щоб стати в чергу на пошук гри.";
+    btnCancel.style.display = "none";
+    btnFind.style.display = "block";
+    btnFind.disabled = false;
+    currentMatchId = null;
+    
+    acceptBtn.disabled = false;
+    acceptBtn.innerText = "ПРИЙНЯТИ";
+    acceptBtn.className = "success-btn";
+    
+    const declineBtn = document.getElementById("decline-match-btn");
+    if (declineBtn) {
+        declineBtn.disabled = false;
+        declineBtn.innerText = "ВІДХИЛИТИ";
+    }
+    acceptStatus.innerText = "";
 }
 
 // ===== Timer =====
@@ -370,6 +397,43 @@ async function acceptMatch() {
         acceptStatus.style.color = "var(--danger)";
         acceptStatus.innerText = "Помилка з'єднання.";
         acceptBtn.disabled = false;
+    }
+}
+
+async function declineMatch() {
+    acceptBtn.disabled = true;
+    const declineBtn = document.getElementById("decline-match-btn");
+    if (declineBtn) {
+        declineBtn.disabled = true;
+        declineBtn.innerText = "ВІДХИЛЕННЯ...";
+    }
+
+    try {
+        const response = await fetch(`${apiUrl}/api/matchmaking/decline/${currentMatchId}`, {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${jwtToken}` }
+        });
+        
+        if (response.ok) {
+            matchModal.classList.remove("active");
+            resetMatchUI();
+        } else {
+            acceptStatus.style.color = "var(--danger)";
+            acceptStatus.innerText = "Помилка відхилення.";
+            acceptBtn.disabled = false;
+            if (declineBtn) {
+                declineBtn.disabled = false;
+                declineBtn.innerText = "ВІДХИЛИТИ";
+            }
+        }
+    } catch (err) {
+        acceptStatus.style.color = "var(--danger)";
+        acceptStatus.innerText = "Помилка з'єднання.";
+        acceptBtn.disabled = false;
+        if (declineBtn) {
+            declineBtn.disabled = false;
+            declineBtn.innerText = "ВІДХИЛИТИ";
+        }
     }
 }
 

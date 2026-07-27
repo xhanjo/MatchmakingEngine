@@ -3,6 +3,7 @@ using MatchmakingEngine.Application.Configuration;
 using MatchmakingEngine.Application.Interfaces;
 using MatchmakingEngine.Application.Interfaces.Repositories;
 using MatchmakingEngine.Data;
+using MatchmakingEngine.HostedServices;
 using MatchmakingEngine.Hubs;
 using MatchmakingEngine.Infrastructure.Repositories;
 using MatchmakingEngine.Infrastructure.Services;
@@ -108,6 +109,7 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(
 
 builder.Services.AddSingleton<IMatchmakingQueue, MatchmakingQueue>();
 builder.Services.AddHostedService<MatchmakingWorker>();
+builder.Services.AddHostedService<MatchCleanupWorker>();
 
 var dbConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("DefaultConnection string is missing.");

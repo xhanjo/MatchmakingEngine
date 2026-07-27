@@ -3,23 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Matchmaking Client</title>
+    <title>MatchLite</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
 </head>
 <body>
-    <div class="container">
+    <div class="container" id="main-container">
+        <div class="logo">MATCH<span>LITE</span></div>
+
+        <!-- Auth Section -->
         <div id="auth-section">
-            <h2>Авторизація</h2>
             <div class="form-group">
-                <input type="text" id="username" placeholder="Username">
+                <label for="username">Нікнейм</label>
+                <input type="text" id="username" placeholder="Введіть ваш нікнейм" autocomplete="off">
             </div>
             <div class="form-group">
-                <input type="password" id="password" placeholder="Password">
+                <label for="password">Пароль</label>
+                <div class="password-wrapper">
+                    <input type="password" id="password" placeholder="Введіть пароль">
+                    <button type="button" class="toggle-password" onclick="togglePassword()" aria-label="Toggle password visibility">
+                        <svg id="eye-icon-open" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                        <svg id="eye-icon-closed" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+                            <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
+                            <line x1="1" y1="1" x2="23" y2="23"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
             <div class="form-group">
+                <label for="region">Регіон</label>
                 <select id="region">
-                    <option value="1">Europe West (EU)</option>
+                    <option value="1">Europe West (EUW)</option>
                     <option value="2">Europe East (EUE)</option>
                     <option value="3">North America (NA)</option>
                     <option value="4">Asia</option>
@@ -30,22 +47,84 @@
             <p id="auth-error" class="error"></p>
         </div>
 
+        <!-- Lobby Section -->
         <div id="lobby-section" style="display: none;">
             
             <div class="profile-card">
                 <img src="" alt="Avatar" class="avatar" id="player-avatar">
                 <div class="profile-info">
                     <h3 id="player-name">Loading...</h3>
-                    <p class="rating">MMR: <span id="player-mmr">---</span></p>
+                    <p class="rating"><span id="player-mmr">---</span> MMR</p>
                 </div>
+                <button onclick="logout()" class="logout-btn">Вийти</button>
             </div>
 
-            <div class="matchmaking-controls">
+            <div class="match-info">
+                <div class="timer" id="search-timer">00:00</div>
+                <div class="status-text" id="match-status">Готовий до гри</div>
+            </div>
+
+            <div class="matchmaking-controls" id="matchmaking-controls">
                 <button id="find-match-btn" onclick="findMatch()">Знайти матч</button>
                 <button id="cancel-match-btn" onclick="cancelMatch()" class="danger" style="display: none;">Відмінити пошук</button>
             </div>
-            
-            <p id="match-status"></p>
+
+            <button id="admin-panel-btn" onclick="openAdminPanel()" class="secondary" style="display: none;">Адмін Панель</button>
+
+            <p class="hint" id="lobby-hint">Натисніть кнопку вище, щоб стати в чергу на пошук гри.</p>
+        </div>
+
+        <!-- Admin Panel Section -->
+        <div id="admin-section" style="display: none;">
+            <div class="admin-header">
+                <h2>Адмін Панель</h2>
+                <div class="admin-controls">
+                    <button onclick="loadAdminData()" class="secondary">Оновити</button>
+                    <button onclick="closeAdminPanel()" class="danger">Назад</button>
+                </div>
+            </div>
+
+            <div class="admin-tables">
+                <h3>Гравці</h3>
+                <div class="table-wrapper">
+                    <table id="players-table">
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>MMR</th>
+                                <th>Region</th>
+                                <th>Role</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <h3 style="margin-top: 20px;">Матчі</h3>
+                <div class="table-wrapper">
+                    <table id="matches-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Status</th>
+                                <th>Avg MMR</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Match Found Modal (Dota Style) -->
+    <div class="modal-overlay" id="match-modal">
+        <div class="modal-content">
+            <h1 class="glow-text">MATCH FOUND</h1>
+            <p>Гру знайдено! Натисніть кнопку, щоб підтвердити готовність.</p>
+            <button onclick="acceptMatch()" class="success-btn" id="accept-match-btn">ПРИЙНЯТИ</button>
+            <p id="accept-status" class="hint"></p>
         </div>
     </div>
 

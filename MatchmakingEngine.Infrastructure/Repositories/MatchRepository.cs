@@ -46,6 +46,16 @@ public class MatchRepository : IMatchRepository
             .Where(m => m.Player1Id == playerId || m.Player2Id == playerId)
             .ToListAsync();
     }
+    public async Task<IEnumerable<Match>> GetAllMatchesAsync(bool trackChanges = false)
+    {
+        var query = trackChanges ? _context.Matches : _context.Matches.AsNoTracking();
+
+        return await query
+            .Include(m => m.Player1)
+            .Include(m => m.Player2)
+            .OrderByDescending(m => m.CreatedAt)
+            .ToListAsync();
+    }
 
     public void Update(Match match)
     {

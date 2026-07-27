@@ -85,11 +85,14 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddMediatR(cfg =>
 {
-    cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
+    cfg.RegisterServicesFromAssemblies(
+        typeof(Program).Assembly,
+        typeof(MatchmakingEngine.Application.Behaviors.ValidationBehavior<,>).Assembly
+    );
     cfg.AddOpenBehavior(typeof(MatchmakingEngine.Application.Behaviors.ValidationBehavior<,>));
 });
 
-builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
+builder.Services.AddValidatorsFromAssembly(typeof(MatchmakingEngine.Application.Behaviors.ValidationBehavior<,>).Assembly);
 
 var redisConfiguration = builder.Configuration["Redis:Configuration"]
     ?? throw new InvalidOperationException("Redis:Configuration is missing in appsettings.json.");
@@ -139,7 +142,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection();
 
 app.UseCors("FrontendPolicy");
 
@@ -172,6 +175,33 @@ using (var scope = app.Services.CreateScope())
             logger.LogWarning("Database is not ready yet. Retrying in 2 seconds... ({Retries} retries left)", retries);
             if (retries == 0) throw;
             Thread.Sleep(2000);
+        }
+    }
+
+
+    var playerRepo = scope.ServiceProvider.GetRequiredService<MatchmakingEngine.Application.Interfaces.Repositories.IPlayerRepository>();
+    var unitOfWork = scope.ServiceProvider.GetRequiredService<MatchmakingEngine.Application.Interfaces.Repositories.IUnitOfWork>();
+
+    var existingAdmin = await playerRepo.GetByUsernameAsync("admin");
+    if (existingAdmin == null)
+    {
+        try
+        {
+            var admin = new MatchmakingEngine.Domain.Player
+            {
+                Username = "admin",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!"),
+                Role = MatchmakingEngine.Domain.PlayerRole.Admin,
+                Region = MatchmakingEngine.Domain.PlayerRegion.EuWest,
+                Mmr = 9999
+            };
+            await playerRepo.AddAsync(admin);
+            await unitOfWork.SaveChangesAsync(default);
+            Console.WriteLine("SuperAdmin успішно створений!");
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException)
+        {
+            Console.WriteLine("SuperAdmin вже існує в БД.");
         }
     }
 }

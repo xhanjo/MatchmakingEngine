@@ -62,3 +62,48 @@ button.secondary:hover {
     font-size: 0.9em;
     min-height: 20px;
 }
+
+.profile-card {
+    background-color: #333;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    border: 1px solid #444;
+}
+
+.avatar {
+    font-size: 2.5em;
+    background: #444;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.profile-info {
+    text-align: left;
+}
+
+.profile-info h3 {
+    margin: 0 0 5px 0;
+    font-size: 1.2em;
+}
+
+.rating {
+    margin: 0;
+    color: #ffd700; 
+    font-weight: bold;
+}
+
+button.danger {
+    background-color: #dc3545;
+}
+
+button.danger:hover {
+    background-color: #c82333;
+}

@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Matchmakin Client</title>
+    <title>Matchmaking Client</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js">
-    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -19,7 +18,12 @@
                 <input type="password" id="password" placeholder="Password">
             </div>
             <div class="form-group">
-                <input type="text" id="region" placeholder="Region (напр. EuEast)" value="EuEast">
+                <select id="region">
+                    <option value="1">Europe West (EU)</option>
+                    <option value="2">Europe East (EUE)</option>
+                    <option value="3">North America (NA)</option>
+                    <option value="4">Asia</option>
+                </select>
             </div>
             <button onclick="login()">Увійти</button>
             <button onclick="register()" class="secondary">Зареєструватися</button>
@@ -27,9 +31,20 @@
         </div>
 
         <div id="lobby-section" style="display: none;">
-            <h2>Лобі</h2>
-            <p>Привіт, <span id="player-name">!</span></p>
-            <button id="find-match-btn" onclick="findMatch()">Знайти матч</button>
+            
+            <div class="profile-card">
+                <img src="" alt="Avatar" class="avatar" id="player-avatar">
+                <div class="profile-info">
+                    <h3 id="player-name">Loading...</h3>
+                    <p class="rating">MMR: <span id="player-mmr">---</span></p>
+                </div>
+            </div>
+
+            <div class="matchmaking-controls">
+                <button id="find-match-btn" onclick="findMatch()">Знайти матч</button>
+                <button id="cancel-match-btn" onclick="cancelMatch()" class="danger" style="display: none;">Відмінити пошук</button>
+            </div>
+            
             <p id="match-status"></p>
         </div>
     </div>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matchmakin Client</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js">
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div id="auth-section">
+            <h2>Авторизація</h2>
+            <div class="form-group">
+                <input type="text" id="username" placeholder="Username">
+            </div>
+            <div class="form-group">
+                <input type="password" id="password" placeholder="Password">
+            </div>
+            <div class="form-group">
+                <input type="text" id="region" placeholder="Region (напр. EuEast)" value="EuEast">
+            </div>
+            <button onclick="login()">Увійти</button>
+            <button onclick="register()" class="secondary">Зареєструватися</button>
+            <p id="auth-error" class="error"></p>
+        </div>
+
+        <div id="lobby-section" style="display: none;">
+            <h2>Лобі</h2>
+            <p>Привіт, <span id="player-name">!</span></p>
+            <button id="find-match-btn" onclick="findMatch()">Знайти матч</button>
+            <p id="match-status"></p>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

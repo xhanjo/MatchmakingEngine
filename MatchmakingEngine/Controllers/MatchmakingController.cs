@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using MatchmakingEngine.Application.Commands.Matchmaking;
 using MatchmakingEngine.Application.Queries.Matchmaking;
 using MatchmakingEngine.DTO;
+using MatchmakingEngine.Application.Application.Commands.Matchmaking;
 
 namespace MatchmakingEngine.Controllers;
 
@@ -27,6 +28,18 @@ public class MatchmakingController : ControllerBase
         if (!success) return NotFound(new { message = "Player not found in database." });
 
         return Ok(new { message = "Player added to search queue!"});
+    }
+
+    [HttpPost("leave")]
+    public async Task<IActionResult> LeaveQueue()
+    {
+        var playerId = GetPlayerIdFromToken();
+        var success = await _mediator.Send(new LeaveQueueCommand(playerId));
+
+        if (!success)
+            return BadRequest(new { message = "Player is not in the queue." });
+
+        return Ok(new { message = "Player removed from search queue." });
     }
 
     [HttpGet("status")]

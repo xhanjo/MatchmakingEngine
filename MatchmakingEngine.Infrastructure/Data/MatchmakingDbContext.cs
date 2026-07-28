@@ -36,6 +36,12 @@ public class MatchmakingDbContext : DbContext
             .IsRowVersion();
 
         modelBuilder.Entity<Match>()
+            .HasIndex(m => m.Player1Id);
+
+        modelBuilder.Entity<Match>()
+            .HasIndex(m => m.Player2Id);
+
+        modelBuilder.Entity<Match>()
             .HasOne(m => m.Player1)
             .WithMany(p => p.MatchesAsPlayer1)
             .HasForeignKey(m => m.Player1Id)

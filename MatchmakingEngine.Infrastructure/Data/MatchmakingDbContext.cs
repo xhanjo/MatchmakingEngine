@@ -32,6 +32,10 @@ public class MatchmakingDbContext : DbContext
             .HasConversion<string>();
 
         modelBuilder.Entity<Match>()
+            .Property<uint>("Version")
+            .IsRowVersion();
+
+        modelBuilder.Entity<Match>()
             .HasOne(m => m.Player1)
             .WithMany(p => p.MatchesAsPlayer1)
             .HasForeignKey(m => m.Player1Id)

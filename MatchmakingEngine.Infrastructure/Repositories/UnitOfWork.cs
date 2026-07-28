@@ -28,7 +28,16 @@ public class UnitOfWork : IUnitOfWork
 
         domainEntities.ForEach(entity => entity.Entity.ClearDomainEvents());
 
-        var result = await _context.SaveChangesAsync(cancellationToken);
+        int result;
+
+        try
+        {
+            result = await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException)
+        {
+            throw new MatchmakingEngine.Domain.Exceptions.ConflictException("Concurrency conflict occured. Please try again.");
+        }
 
         foreach (var domainEvent in domainEvents)
         {

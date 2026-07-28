@@ -33,7 +33,10 @@ public class CompleteMatchCommandHandler : IRequestHandler<CompleteMatchCommand,
             throw new NotFoundException($"Match with ID {request.MatchId} was not found.");
 
         if (match.Status != MatchStatus.Accepted)
-            throw new ConflictException("Match has not starter yet or is already finished.");
+            throw new ConflictException("Match has not started yet or is already finished.");
+
+        if (request.WinnerId != match.Player1Id && request.WinnerId != match.Player2Id)
+            throw new ConflictException("WinnerId must be one of the match participants");
 
         Guid loserId = (request.WinnerId == match.Player1Id) ? match.Player2Id : match.Player1Id;
 
@@ -55,7 +58,7 @@ public class CompleteMatchCommandHandler : IRequestHandler<CompleteMatchCommand,
             match.Id, winner.Username, winner.Mmr, loser.Username, loser.Mmr);
 
         return new CompleteMatchResult(
-            "Match completed successfuly!",
+            "Match completed successfully!",
             new PlayerMatchResultDto(winner.Username, winner.Mmr),
             new PlayerMatchResultDto(loser.Username, loser.Mmr),
             match.Status

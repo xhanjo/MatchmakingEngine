@@ -18,7 +18,6 @@ public class PlayersController : ControllerBase
         _mediator = mediator;
     }
 
-    [AllowAnonymous]
     [HttpGet]
     public async Task<IActionResult> GetAllPlayers()
     {
@@ -26,7 +25,6 @@ public class PlayersController : ControllerBase
         return Ok(result);
     }
 
-    [AllowAnonymous]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetPlayerById(Guid id)
     {

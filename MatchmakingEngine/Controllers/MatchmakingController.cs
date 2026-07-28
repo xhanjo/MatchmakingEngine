@@ -86,7 +86,7 @@ public class MatchmakingController : ControllerBase
     [HttpPost("complete/{matchId}")]
     public async Task<IActionResult> CompleteMatch(Guid matchId, [FromQuery] Guid winnerId)
     {
-        var result = await _mediator.Send(new CompleteMatchCommand(matchId, winnerId));
+        var result = await _mediator.Send(new CompleteMatchCommand(matchId));
 
         return Ok(result);
     }

@@ -83,7 +83,7 @@ public class MatchmakingWorker : BackgroundService
 
         if (opponent != null)
         {
-            await CreateMatchAndNotifyAsync(anchor, opponent);
+            await CreateMatchAndNotifyAsync(anchor, opponent, cancellationToken);
         }
         else
         {
@@ -95,35 +95,76 @@ public class MatchmakingWorker : BackgroundService
 
     }
 
-    private async Task CreateMatchAndNotifyAsync(MatchmakingTicket p1, MatchmakingTicket p2)
+    private async Task CreateMatchAndNotifyAsync(MatchmakingTicket p1, MatchmakingTicket p2, CancellationToken cancellationToken)
     {
+        using var scope = _scopeFactory.CreateScope();
+        var matchRepo = scope.ServiceProvider.GetRequiredService<IMatchRepository>();
+        var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+
+        var match = new Match(
+            Guid.NewGuid(),
+            (p1.Mmr + p2.Mmr) / 2,
+            DateTimeOffset.UtcNow,
+            GameMode.Solo
+            );
+
+        match.Players.Add(new MatchPlayer
+        {
+            Id = Guid.NewGuid(),
+            MatchId = match.Id,
+            PlayerId = p1.PlayerId,
+            Team = 1,
+            Player = null!,
+            Match = null!
+        });
+
+        match.Players.Add(new MatchPlayer
+        {
+            Id = Guid.NewGuid(),
+            MatchId = match.Id,
+            PlayerId = p2.PlayerId,
+            Team = 2,
+            Player = null!,
+            Match = null!
+        });
+
+        await matchRepo.AddAsync(match);
+        await uow.SaveChangesAsync(cancellationToken);
+
         await _queue.RemovePlayerAsync(p1);
         await _queue.RemovePlayerAsync(p2);
 
-        var lobbyId = Guid.NewGuid();
-        var match = new Match(
-            Id: lobbyId,
-            Player1Id: p1.PlayerId,
-            Player2Id: p2.PlayerId,
-            AverageMmr: (p1.Mmr + p2.Mmr) / 2,
-            CreatedAt: DateTimeOffset.UtcNow
-            );
+        await _hubContext.Clients.User(p1.PlayerId.ToString()).SendAsync("MatchFound", match.Id, cancellationToken);
+        await _hubContext.Clients.User(p2.PlayerId.ToString()).SendAsync("MatchFound", match.Id, cancellationToken);
 
-        using (var scope = _scopeFactory.CreateScope())
-        {
-            var matchRepo = scope.ServiceProvider.GetRequiredService<IMatchRepository>();
-            var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+        _logger.LogInformation("Match {MatchId} created between {P1} ad {P2}", match.Id, p1.Username, p2.Username);
+        //await _queue.RemovePlayerAsync(p1);
+        //await _queue.RemovePlayerAsync(p2);
 
-            await matchRepo.AddAsync(match);
-            await unitOfWork.SaveChangesAsync(CancellationToken.None);
-        }
+        //var lobbyId = Guid.NewGuid();
+        //var match = new Match(
+        //    Id: lobbyId,
+        //    Player1Id: p1.PlayerId,
+        //    Player2Id: p2.PlayerId,
+        //    AverageMmr: (p1.Mmr + p2.Mmr) / 2,
+        //    CreatedAt: DateTimeOffset.UtcNow
+        //    );
 
-        var matchPayload = new { LobbyId = lobbyId, AverageMmr = match.AverageMmr };
+        //using (var scope = _scopeFactory.CreateScope())
+        //{
+        //    var matchRepo = scope.ServiceProvider.GetRequiredService<IMatchRepository>();
+        //    var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
-        await _hubContext.Clients.Group(p1.PlayerId.ToString()).SendAsync("MatchFound", matchPayload);
-        await _hubContext.Clients.Group(p2.PlayerId.ToString()).SendAsync("MatchFound", matchPayload);
+        //    await matchRepo.AddAsync(match);
+        //    await unitOfWork.SaveChangesAsync(CancellationToken.None);
+        //}
 
-        _logger.LogWarning("[MATCH FOUND] Lobby {LobbyId}! [{P1}] vs [{P2}] on {Region}!",
-            lobbyId, p1.Username, p2.Username, p1.Region);
+        //var matchPayload = new { LobbyId = lobbyId, AverageMmr = match.AverageMmr };
+
+        //await _hubContext.Clients.Group(p1.PlayerId.ToString()).SendAsync("MatchFound", matchPayload);
+        //await _hubContext.Clients.Group(p2.PlayerId.ToString()).SendAsync("MatchFound", matchPayload);
+
+        //_logger.LogWarning("[MATCH FOUND] Lobby {LobbyId}! [{P1}] vs [{P2}] on {Region}!",
+        //    lobbyId, p1.Username, p2.Username, p1.Region);
     }
 }

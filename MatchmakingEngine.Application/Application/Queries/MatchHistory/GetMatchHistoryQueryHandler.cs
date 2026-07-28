@@ -20,15 +20,12 @@ public class GetMatchHistoryQueryHandler : IRequestHandler<GetMatchHistoryQuery,
     }
     public async Task<List<MatchDto>> Handle(GetMatchHistoryQuery request, CancellationToken cancellationToken)
     {
-        var matches = await _matchRepository.GetMatchHistoryByPlayerIdAsync(request.PlayerId, trackChanges: false);
+        var matches = await _matchRepository.GetMatchHistoryByPlayerIdAsync(request.PlayerId, trackChanges: false, cancellationToken);
 
-        var dtos = matches.Select(m => new MatchDto(
-                m.Id,
-                m.Status.ToString(),
-                new PlayerDto(m.Player1Id, m.Player1.Username, m.Player1.Mmr),
-                new PlayerDto(m.Player2Id, m.Player2.Username, m.Player2.Mmr)
+        return matches.Select(m => new MatchDto(
+            m.Id,
+            m.Status,
+            m.CreatedAt
             )).ToList();
-
-        return dtos;
     }
 }

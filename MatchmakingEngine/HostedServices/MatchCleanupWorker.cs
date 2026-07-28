@@ -26,9 +26,9 @@ public class MatchCleanupWorker : BackgroundService
         _logger = logger;
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        while (!stoppingToken.IsCancellationRequested)
+        while (!cancellationToken.IsCancellationRequested)
         {
             try
             {
@@ -38,8 +38,9 @@ public class MatchCleanupWorker : BackgroundService
                 var timeoutThreshold = DateTime.UtcNow.AddSeconds(-30);
 
                 var expiredMatches = await dbContext.Matches
+                    .Include(m => m.Players)
                     .Where(m => m.Status == MatchStatus.Pending && m.CreatedAt < timeoutThreshold)
-                    .ToListAsync(stoppingToken);
+                    .ToListAsync(cancellationToken);
 
                 if (expiredMatches.Any())
                 {
@@ -48,10 +49,13 @@ public class MatchCleanupWorker : BackgroundService
                         _logger.LogInformation("Match {MatchId} timed out. Canceling.", match.Id);
                         match.Status = MatchStatus.Canceled;
 
-                        await _hubContext.Clients.User(match.Player1Id.ToString()).SendAsync("MatchCanceled", cancellationToken: stoppingToken);
-                        await _hubContext.Clients.User(match.Player2Id.ToString()).SendAsync("MatchCanceled", cancellationToken: stoppingToken);
+                        foreach(var mp in match.Players)
+                        {
+                            await _hubContext.Clients.User(mp.PlayerId.ToString()).SendAsync("MatchCanceled", cancellationToken);
+
+                        }
                     }
-                    await dbContext.SaveChangesAsync(stoppingToken);
+                    await dbContext.SaveChangesAsync(cancellationToken);
                 }
             }
             catch (Exception ex)
@@ -59,7 +63,7 @@ public class MatchCleanupWorker : BackgroundService
                 _logger.LogError(ex, "Error occurred executing MatchCleanupWorker.");
             }
 
-            await Task.Delay(5000, stoppingToken);
+            await Task.Delay(5000, cancellationToken);
         }
     }
 }

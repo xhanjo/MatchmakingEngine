@@ -33,7 +33,9 @@ public class JoinQueueCommandHandler : IRequestHandler<JoinQueueCommand, bool>
             player.Mmr,
             player.TrustFactor,
             player.Region,
-            DateTimeOffset.UtcNow
+            DateTimeOffset.UtcNow,
+            GameMode.Solo,
+            null
         );
 
         await _matchmakingQueue.EnqueueAsync(ticket);

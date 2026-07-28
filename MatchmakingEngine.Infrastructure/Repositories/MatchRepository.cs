@@ -19,8 +19,8 @@ public class MatchRepository : IMatchRepository
         var query = trackChanges ? _context.Matches : _context.Matches.AsNoTracking();
 
         return await query
-            .Include(m => m.Player1)
-            .Include(m => m.Player2)
+            .Include(m => m.Players)
+            .ThenInclude(mp => mp.Player)
             .FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
     }
 
@@ -29,11 +29,9 @@ public class MatchRepository : IMatchRepository
         var query = trackChanges ? _context.Matches : _context.Matches.AsNoTracking();
 
         return await query
-            .Include(m => m.Player1)
-            .Include(m => m.Player2)
             .FirstOrDefaultAsync(m =>
-            (m.Player1Id == playerId || m.Player2Id == playerId) &&
-            (m.Status == MatchStatus.Pending || m.Status == MatchStatus.Accepted), cancellationToken);
+                m.Players.Any(mp => mp.PlayerId == playerId) &&
+                (m.Status == MatchStatus.Pending || m.Status == MatchStatus.Accepted), cancellationToken);
     }
 
     public async Task<IEnumerable<Match>> GetMatchHistoryByPlayerIdAsync(Guid playerId, bool trackChanges = false, CancellationToken cancellationToken = default)
@@ -41,9 +39,9 @@ public class MatchRepository : IMatchRepository
         var query = trackChanges ? _context.Matches : _context.Matches.AsNoTracking();
 
         return await query
-            .Include(m => m.Player1)
-            .Include(m => m.Player2)
-            .Where(m => m.Player1Id == playerId || m.Player2Id == playerId)
+            .Include(m => m.Players)
+            .ThenInclude(mp => mp.Player)
+            .Where(m => m.Players.Any(mp => mp.PlayerId == playerId))
             .ToListAsync(cancellationToken);
     }
     public async Task<IEnumerable<Match>> GetAllMatchesAsync(bool trackChanges = false, CancellationToken cancellationToken = default)
@@ -51,8 +49,8 @@ public class MatchRepository : IMatchRepository
         var query = trackChanges ? _context.Matches : _context.Matches.AsNoTracking();
 
         return await query
-            .Include(m => m.Player1)
-            .Include(m => m.Player2)
+            .Include(m => m.Players)
+            .ThenInclude(mp => mp.Player)
             .OrderByDescending(m => m.CreatedAt)
             .ToListAsync(cancellationToken);
     }

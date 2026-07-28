@@ -35,33 +35,16 @@ public class CompleteMatchCommandHandler : IRequestHandler<CompleteMatchCommand,
         if (match.Status != MatchStatus.Accepted)
             throw new ConflictException("Match has not started yet or is already finished.");
 
-        if (request.WinnerId != match.Player1Id && request.WinnerId != match.Player2Id)
-            throw new ConflictException("WinnerId must be one of the match participants");
-
-        Guid loserId = (request.WinnerId == match.Player1Id) ? match.Player2Id : match.Player1Id;
-
-        var winner = match.Player1Id == request.WinnerId ? match.Player1 : match.Player2;
-        var loser = match.Player1Id == request.WinnerId ? match.Player2 : match.Player1;
-
-        if (winner == null || loser == null)
-            throw new NotFoundException("One or both players were not found in the database.");
-
-        int MmrChange = 25;
-        winner.RecordWin(MmrChange);
-        loser.RecordLoss(MmrChange);
-
         match.Status = MatchStatus.Finished;
-
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        _logger.LogInformation("[GAME END] Match {matchId} completed. Winner: {winner} ({WMmr}), Loser: {loser} ({LMmr})",
-            match.Id, winner.Username, winner.Mmr, loser.Username, loser.Mmr);
-
         return new CompleteMatchResult(
-            "Match completed successfully!",
-            new PlayerMatchResultDto(winner.Username, winner.Mmr),
-            new PlayerMatchResultDto(loser.Username, loser.Mmr),
+            "Match completed",
+            Guid.Empty,
+            Guid.Empty,
+            "Temp",
+            new List<PlayerStatsDto>(),
             match.Status
-            );
+        );
     }
 }
+

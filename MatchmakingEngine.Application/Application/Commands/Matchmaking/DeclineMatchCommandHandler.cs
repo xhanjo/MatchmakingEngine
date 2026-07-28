@@ -2,8 +2,6 @@
 using MatchmakingEngine.Application.Interfaces.Repositories;
 using MatchmakingEngine.Domain;
 using MediatR;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace MatchmakingEngine.Application.Commands.Matchmaking;
 
@@ -24,7 +22,7 @@ public class DeclineMatchCommandHandler : IRequestHandler<DeclineMatchCommand, b
         if (match == null || match.Status != MatchStatus.Pending)
             return false;
 
-        if (match.Player1Id != request.PlayerId && match.Player2Id != request.PlayerId)
+        if (!match.Players.Any(p => p.PlayerId == request.PlayerId))
             return false;
 
         match.Status = MatchStatus.Canceled;

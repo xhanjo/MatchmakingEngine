@@ -8,8 +8,5 @@ public class CompleteMatchCommandValidator : AbstractValidator<CompleteMatchComm
     {
         RuleFor(x => x.MatchId)
             .NotEmpty().WithMessage("Match ID is required and cannot be empty.");
-
-        RuleFor(x => x.WinnerId)
-            .NotEmpty().WithMessage("Winner ID is required and cannot be empty.");
     }
 }

@@ -4,12 +4,21 @@ namespace MatchmakingEngine.DTO;
 
 public record CompleteMatchResult(
     string Message,
-    PlayerMatchResultDto Winner,
-    PlayerMatchResultDto Loser,
-    MatchStatus MatchStatus
+    Guid WinningTeam,
+    Guid MvpPlayerId,
+    string MvpUsername,
+    List<PlayerStatsDto> Scoreboard,
+    MatchStatus Status
     );
 
-public record PlayerMatchResultDto(
-    string Username, 
-    double NewMmr
+public record PlayerStatsDto(
+    Guid PlayerId,
+    string Username,
+    int Team,
+    int Kills,
+    int Deaths,
+    int Assists,
+    int Score,
+    bool IsMvp,
+    int MmrChange
     );

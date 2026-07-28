@@ -34,15 +34,16 @@ public class AcceptMatchCommandHandler : IRequestHandler<AcceptMatchCommand, Acc
         if (match.Status != MatchStatus.Pending)
             throw new ConflictException("This match is no longer waiting for acceptance.");
 
-        if (request.PlayerId != match.Player1Id && request.PlayerId != match.Player2Id)
+        var playerInMatch = match.Players.FirstOrDefault(p => p.PlayerId == request.PlayerId);
+
+        if (playerInMatch == null)
             throw new ConflictException("You are not a participant in this match.");
 
-        if (request.PlayerId == match.Player1Id)
-            match.Player1Accepted = true;
-        if (request.PlayerId == match.Player2Id)
-            match.Player2Accepted = true;
+        playerInMatch.Accepted = true;
 
-        if (match.Player1Accepted && match.Player2Accepted)
+        bool allAccepted = match.Players.All(p => p.Accepted);
+
+        if (allAccepted)
         {
             match.Status = MatchStatus.Accepted;
             _logger.LogInformation("[GAME START] All player accepted! Match {MatchId} is starting!", match.Id);
@@ -54,8 +55,7 @@ public class AcceptMatchCommandHandler : IRequestHandler<AcceptMatchCommand, Acc
 
         return new AcceptMatchResult(
             statusMesage,
-            match.Player1Accepted,
-            match.Player2Accepted,
+            allAccepted,
             match.Status
         );
     }

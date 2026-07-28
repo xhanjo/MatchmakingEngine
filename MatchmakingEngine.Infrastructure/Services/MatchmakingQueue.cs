@@ -10,6 +10,7 @@ public class MatchmakingQueue : IMatchmakingQueue
     private readonly IDatabase _redisDb;
     private const string EvaluationQueueKey = "matchmaking_queue";
     private const string ActivePlayersHashKey = "active_players";
+    private const string ProcessingQueueKey = "matchmaking_queue_processing";
 
     public MatchmakingQueue(IConnectionMultiplexer redisConnection)
     {
@@ -23,14 +24,16 @@ public class MatchmakingQueue : IMatchmakingQueue
 
         await _redisDb.HashSetAsync(ActivePlayersHashKey, playerIdStr, json);
 
-        await _redisDb.ListRightPushAsync(EvaluationQueueKey, playerIdStr);
+        await _redisDb.ListRemoveAsync(ProcessingQueueKey, playerIdStr);
+
+        await _redisDb.ListLeftPushAsync(EvaluationQueueKey, playerIdStr);
 
         await _redisDb.SortedSetAddAsync($"Mmr_index:{ticket.Region}", playerIdStr, ticket.Mmr);
     }
 
     public async ValueTask<Guid?> DequeueEvaluationIdAsync(CancellationToken cancellationToken = default)
     {
-        var redisValue = await _redisDb.ListLeftPopAsync(EvaluationQueueKey);
+        var redisValue = await _redisDb.ListRightPopLeftPushAsync(EvaluationQueueKey, ProcessingQueueKey);
 
         if (!redisValue.HasValue)
         {
@@ -72,7 +75,8 @@ public class MatchmakingQueue : IMatchmakingQueue
 
         var hashTask = _redisDb.HashDeleteAsync(ActivePlayersHashKey, playerIdStr);
         var setTask = _redisDb.SortedSetRemoveAsync(indexKey, playerIdStr);
+        var listTask = _redisDb.ListRemoveAsync(ProcessingQueueKey, playerIdStr);
 
-        await Task.WhenAll(hashTask, setTask);
+        await Task.WhenAll(hashTask, setTask, listTask);
     }
 }

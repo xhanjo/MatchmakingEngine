@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Runtime.CompilerServices;
 using MatchmakingEngine.Domain.Common;
 using MatchmakingEngine.Domain.Events;
 
@@ -8,8 +9,10 @@ public class Player : Entity
 {
     public Guid Id { get; set; } = Guid.NewGuid();
 
-    public ICollection<Match> MatchesAsPlayer1 { get; set; } = new List<Match>();
-    public ICollection<Match> MatchesAsPlayer2 { get; set; } = new List<Match>();
+    public ICollection<MatchPlayer> MatchPlayers { get; set; } = new List<MatchPlayer>();
+    public ICollection<Friendship> SentFriendRequests { get; set; } = new List<Friendship>();
+    public ICollection<Friendship> ReceivedFriendRequests { get; set; } = new List<Friendship>();
+    public ICollection<PartyMember> PartyMemberships { get; set; } = new List<PartyMember>();
 
     public string PasswordHash { get; set; } = string.Empty;
     public PlayerRole Role { get; set; } = PlayerRole.Player;

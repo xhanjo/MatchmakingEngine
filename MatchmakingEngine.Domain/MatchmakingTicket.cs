@@ -9,5 +9,7 @@ public record MatchmakingTicket
     int Mmr,
     double TrustFactor,
     PlayerRegion Region,
-    DateTimeOffset EnqueuedAt
+    DateTimeOffset EnqueuedAt,
+    GameMode GameMode,
+    Guid? PartyId
     );

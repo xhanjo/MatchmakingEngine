@@ -1,4 +1,4 @@
-﻿namespace MatchmakingEngine.Domain;
+namespace MatchmakingEngine.Domain;
 
 public class Friendship
 {
@@ -7,6 +7,6 @@ public class Friendship
     public Guid ReceiverId { get; set; }
     public FriendshipStatus Status { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
-    public Player Sender { get; set; }
-    public Player Receiver { get; set; }
+    public Player Sender { get; set; } = null!;
+    public Player Receiver { get; set; } = null!;
 }

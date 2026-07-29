@@ -1,4 +1,4 @@
-﻿namespace MatchmakingEngine.Domain;
+namespace MatchmakingEngine.Domain;
 
 public class PartyMember
 {
@@ -6,6 +6,6 @@ public class PartyMember
     public Guid PartyId { get; set; }
     public Guid PlayerId { get; set; }
     public DateTimeOffset JoinedAt { get; set; }
-    public Party Party { get; set; }
-    public Player Player { get; set; }
+    public Party Party { get; set; } = null!;
+    public Player Player { get; set; } = null!;
 }

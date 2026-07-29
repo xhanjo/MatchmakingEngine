@@ -1,4 +1,4 @@
-﻿namespace MatchmakingEngine.Domain;
+namespace MatchmakingEngine.Domain;
 
 public class MatchPlayer
 {
@@ -12,6 +12,6 @@ public class MatchPlayer
     public int Assists { get; set; } = 0;
     public int Score { get; set; } = 0;
     public bool IsMvp { get; set; } = false;
-    public Match Match { get; set; }
-    public Player Player { get; set; }
+    public Match Match { get; set; } = null!;
+    public Player Player { get; set; } = null!;
 }

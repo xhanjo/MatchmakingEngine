@@ -4,9 +4,9 @@ namespace MatchmakingEngine.Application.Interfaces.Repositories;
 
 public interface IPlayerRepository
 {
-    Task<Player?> GetByIdAsync(Guid id, bool trackChanges = false);
-    Task<Player?> GetByUsernameAsync(string username, bool trackChanges = false);
-    Task<IEnumerable<Player>> GetAllAsync(bool trackChanges = false);
-    Task AddAsync(Player player);
+    Task<Player?> GetByIdAsync(Guid id, bool trackChanges = false, CancellationToken cancellationToken = default);
+    Task<Player?> GetByUsernameAsync(string username, bool trackChanges = false, CancellationToken cancellationToken = default);
+    Task<IEnumerable<Player>> GetAllAsync(bool trackChanges = false, CancellationToken cancellationToken = default);
+    Task AddAsync(Player player, CancellationToken cancellationToken = default);
     void Update(Player player);
 }

@@ -14,27 +14,26 @@ public class PlayerRepository : IPlayerRepository
         _context = context;
     }
 
-    public async Task AddAsync(Player player)
-    {
-        await _context.Players.AddAsync(player);
-    }
-
-    public async Task<IEnumerable<Player>> GetAllAsync(bool trackChanges = false)
+    public async Task<IEnumerable<Player>> GetAllAsync(bool trackChanges = false, CancellationToken cancellationToken = default)
     {
         var query = trackChanges ? _context.Players : _context.Players.AsNoTracking();
-        return await query.ToListAsync();
+        return await query.ToListAsync(cancellationToken);
     }
 
-    public async Task<Player?> GetByIdAsync(Guid id, bool trackChanges = false)
+    public async Task<Player?> GetByIdAsync(Guid id, bool trackChanges = false, CancellationToken cancellationToken = default)
     {
         var query = trackChanges ? _context.Players : _context.Players.AsNoTracking();
-        return await query.FirstOrDefaultAsync(p => p.Id == id);
+        return await query.FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
     }
 
-    public async Task<Player?> GetByUsernameAsync(string username, bool trackChanges = false)
+    public async Task<Player?> GetByUsernameAsync(string username, bool trackChanges = false, CancellationToken cancellationToken = default)
     {
         var query = trackChanges ? _context.Players : _context.Players.AsNoTracking();
-        return await query.FirstOrDefaultAsync(p => p.Username == username);
+        return await query.FirstOrDefaultAsync(p => p.Username == username, cancellationToken);
+    }
+    public async Task AddAsync(Player player, CancellationToken cancellationToken = default)
+    {
+        await _context.Players.AddAsync(player, cancellationToken);
     }
 
     public void Update(Player player)

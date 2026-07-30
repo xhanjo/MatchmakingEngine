@@ -13,6 +13,7 @@ public class JoinQueueCommandHandlerTests
 {
     private readonly Mock<IPlayerRepository> _playerRepoMock = new();
     private readonly Mock<IMatchmakingQueue> _queueMock = new();
+    private readonly Mock<IPartyRepository> _partyRepoMock = new(); 
 
     [Fact]
     public async Task Handle_ValidPlayer_ShouldAddToQueueAndReturnTrue()
@@ -26,10 +27,12 @@ public class JoinQueueCommandHandlerTests
             TrustFactor = 0.5
         };
 
-        _playerRepoMock.Setup(x => x.GetByIdAsync(player.Id, false)).ReturnsAsync(player);
+        _playerRepoMock.Setup(x => x.GetByIdAsync(player.Id, false, It.IsAny<CancellationToken>())).ReturnsAsync(player);
         _queueMock.Setup(x => x.IsPlayerInQueueAsync(player.Id)).ReturnsAsync(false);
 
-        var handler = new JoinQueueCommandHandler(_playerRepoMock.Object, _queueMock.Object);
+        _partyRepoMock.Setup(x => x.GetPartyByPlayerIdAsync(player.Id, false, It.IsAny<CancellationToken>())).ReturnsAsync((Party?)null);
+
+        var handler = new JoinQueueCommandHandler(_playerRepoMock.Object, _queueMock.Object, _partyRepoMock.Object);
         var command = new JoinQueueCommand(player.Id);
 
 
@@ -39,7 +42,8 @@ public class JoinQueueCommandHandlerTests
 
         _queueMock.Verify(q => q.EnqueueAsync(It.Is<MatchmakingTicket>(t =>
        t.PlayerId == player.Id &&
-       t.Mmr == player.Mmr
+       t.Mmr == player.Mmr &&
+       t.GameMode == GameMode.Solo
        )), Times.Once);
     }
 }

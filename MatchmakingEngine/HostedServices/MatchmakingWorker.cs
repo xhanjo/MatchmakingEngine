@@ -11,6 +11,7 @@ public class MatchmakingWorker : BackgroundService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<MatchmakingWorker> _logger;
     private readonly IHubContext<MatchmakingHub> _hubContext;
+    private GameMode _currentModeToProcess = GameMode.Solo;
 
     private const double MaxTrustDifference = 0.3;
     public MatchmakingWorker(
@@ -33,10 +34,12 @@ public class MatchmakingWorker : BackgroundService
         {
             try
             {
-                var anchorId = await _queue.DequeueEvaluationIdAsync(stoppingToken);
+                _currentModeToProcess = _currentModeToProcess == GameMode.Solo ? GameMode.Duo : GameMode.Solo;
+
+                var anchorId = await _queue.DequeueEvaluationIdAsync(_currentModeToProcess, stoppingToken);
 
                 if (anchorId.HasValue)
-                    await ProcessEvaluationAsync(anchorId.Value, stoppingToken);
+                    await ProcessEvaluationAsync(anchorId.Value, _currentModeToProcess, stoppingToken);
 
                 await Task.Delay(2000, stoppingToken);
             }
@@ -49,19 +52,17 @@ public class MatchmakingWorker : BackgroundService
     }
 
 
-    internal async Task ProcessEvaluationAsync(Guid anchorId, CancellationToken cancellationToken)
+    internal async Task ProcessEvaluationAsync(Guid anchorId, GameMode gameMode, CancellationToken cancellationToken)
     {
         var anchor = await _queue.GetTicketAsync(anchorId);
         if (anchor == null) return;
 
         var waitTimeSeconds = DateTimeOffset.UtcNow - anchor.EnqueuedAt;
-
         var currentDelta = Math.Min(300, 50 + waitTimeSeconds.TotalSeconds * 5);
-
         var minMmr = anchor.Mmr - currentDelta;
         var maxMmr = anchor.Mmr + currentDelta;
 
-        var candidateIds = await _queue.GetCandidatesByMmrRangeAsync(anchor.Region, minMmr, maxMmr);
+        var candidateIds = await _queue.GetCandidatesByMmrRangeAsync(anchor.Region, gameMode, minMmr, maxMmr);
 
         MatchmakingTicket? opponent = null;
 
@@ -89,8 +90,8 @@ public class MatchmakingWorker : BackgroundService
         {
             await _queue.EnqueueAsync(anchor);
 
-            _logger.LogInformation("[Queue] {User} waiting {Wait:N0}s. Delta {Delta} Requeued.",
-               anchor.Username, waitTimeSeconds.TotalSeconds, currentDelta);
+            _logger.LogInformation("[Queue] [{Mode}] {User} waiting {Wait:N0}s. Delta {Delta} Requeued.",
+               gameMode, anchor.Username, waitTimeSeconds.TotalSeconds, currentDelta);
         }
 
     }
@@ -99,34 +100,38 @@ public class MatchmakingWorker : BackgroundService
     {
         using var scope = _scopeFactory.CreateScope();
         var matchRepo = scope.ServiceProvider.GetRequiredService<IMatchRepository>();
+        var partyRepo = scope.ServiceProvider.GetRequiredService<IPartyRepository>();
         var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
         var match = new Match(
             Guid.NewGuid(),
             (p1.Mmr + p2.Mmr) / 2,
             DateTimeOffset.UtcNow,
-            GameMode.Solo
+            p1.GameMode
             );
 
-        match.Players.Add(new MatchPlayer
+        async Task AddPlayersToTeam(MatchmakingTicket ticket, int teamIndex)
         {
-            Id = Guid.NewGuid(),
-            MatchId = match.Id,
-            PlayerId = p1.PlayerId,
-            Team = 1,
-            Player = null!,
-            Match = null!
-        });
+            if (ticket.PartyId.HasValue)
+            {
+                var party = await partyRepo.GetByIdWithMembersAsync(ticket.PartyId.Value, trackChanges: false, cancellationToken);
 
-        match.Players.Add(new MatchPlayer
-        {
-            Id = Guid.NewGuid(),
-            MatchId = match.Id,
-            PlayerId = p2.PlayerId,
-            Team = 2,
-            Player = null!,
-            Match = null!
-        });
+                if (party != null)
+                {
+                    foreach (var member in party.Members)
+                    {
+                        match.Players.Add(new MatchPlayer { Id = Guid.NewGuid(), MatchId = match.Id, PlayerId = member.PlayerId, Team = teamIndex });
+                    }
+                }
+            }
+            else
+            {
+                match.Players.Add(new MatchPlayer { Id = Guid.NewGuid(), MatchId = match.Id, PlayerId = ticket.PlayerId, Team = teamIndex });
+            }
+        }
+
+        await AddPlayersToTeam(p1, 1);
+        await AddPlayersToTeam(p2, 2);
 
         await matchRepo.AddAsync(match);
         await uow.SaveChangesAsync(cancellationToken);
@@ -134,37 +139,12 @@ public class MatchmakingWorker : BackgroundService
         await _queue.RemovePlayerAsync(p1);
         await _queue.RemovePlayerAsync(p2);
 
-        await _hubContext.Clients.User(p1.PlayerId.ToString()).SendAsync("MatchFound", match.Id, cancellationToken);
-        await _hubContext.Clients.User(p2.PlayerId.ToString()).SendAsync("MatchFound", match.Id, cancellationToken);
 
-        _logger.LogInformation("Match {MatchId} created between {P1} ad {P2}", match.Id, p1.Username, p2.Username);
-        //await _queue.RemovePlayerAsync(p1);
-        //await _queue.RemovePlayerAsync(p2);
+        foreach (var player in match.Players)
+        {
+            await _hubContext.Clients.User(player.PlayerId.ToString()).SendAsync("MatchFound", match.Id, cancellationToken);
+        }
 
-        //var lobbyId = Guid.NewGuid();
-        //var match = new Match(
-        //    Id: lobbyId,
-        //    Player1Id: p1.PlayerId,
-        //    Player2Id: p2.PlayerId,
-        //    AverageMmr: (p1.Mmr + p2.Mmr) / 2,
-        //    CreatedAt: DateTimeOffset.UtcNow
-        //    );
-
-        //using (var scope = _scopeFactory.CreateScope())
-        //{
-        //    var matchRepo = scope.ServiceProvider.GetRequiredService<IMatchRepository>();
-        //    var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-
-        //    await matchRepo.AddAsync(match);
-        //    await unitOfWork.SaveChangesAsync(CancellationToken.None);
-        //}
-
-        //var matchPayload = new { LobbyId = lobbyId, AverageMmr = match.AverageMmr };
-
-        //await _hubContext.Clients.Group(p1.PlayerId.ToString()).SendAsync("MatchFound", matchPayload);
-        //await _hubContext.Clients.Group(p2.PlayerId.ToString()).SendAsync("MatchFound", matchPayload);
-
-        //_logger.LogWarning("[MATCH FOUND] Lobby {LobbyId}! [{P1}] vs [{P2}] on {Region}!",
-        //    lobbyId, p1.Username, p2.Username, p1.Region);
+        _logger.LogInformation("Match {MatchId} created (Mode: {Mode})", match.Id, match.GameMode);
     }
 }

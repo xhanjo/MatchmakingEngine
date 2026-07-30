@@ -8,14 +8,16 @@ namespace MatchmakingEngine.Infrastructure.Services;
 public class MatchmakingQueue : IMatchmakingQueue
 {
     private readonly IDatabase _redisDb;
-    private const string EvaluationQueueKey = "matchmaking_queue";
     private const string ActivePlayersHashKey = "active_players";
-    private const string ProcessingQueueKey = "matchmaking_queue_processing";
 
     public MatchmakingQueue(IConnectionMultiplexer redisConnection)
     {
         _redisDb = redisConnection.GetDatabase();
     }
+
+    private string GetEvaluationQueueKey(GameMode mode) => $"matchmaking_queue_{mode}";
+    private string GetProcessingQueueKey(GameMode mode) => $"matchmaking_queue_processing_{mode}";
+    private string GetMmrIndexKey(GameMode mode, PlayerRegion region) => $"Mmr_index:{mode}:{region}";
 
     public async ValueTask EnqueueAsync(MatchmakingTicket ticket)
     {
@@ -24,16 +26,18 @@ public class MatchmakingQueue : IMatchmakingQueue
 
         await _redisDb.HashSetAsync(ActivePlayersHashKey, playerIdStr, json);
 
-        await _redisDb.ListRemoveAsync(ProcessingQueueKey, playerIdStr);
+        await _redisDb.ListRemoveAsync(GetProcessingQueueKey(ticket.GameMode), playerIdStr);
 
-        await _redisDb.ListLeftPushAsync(EvaluationQueueKey, playerIdStr);
+        await _redisDb.ListLeftPushAsync(GetEvaluationQueueKey(ticket.GameMode), playerIdStr);
 
-        await _redisDb.SortedSetAddAsync($"Mmr_index:{ticket.Region}", playerIdStr, ticket.Mmr);
+        await _redisDb.SortedSetAddAsync(GetMmrIndexKey(ticket.GameMode, ticket.Region), playerIdStr, ticket.Mmr);
     }
 
-    public async ValueTask<Guid?> DequeueEvaluationIdAsync(CancellationToken cancellationToken = default)
+    public async ValueTask<Guid?> DequeueEvaluationIdAsync(GameMode gameMode, CancellationToken cancellationToken = default)
     {
-        var redisValue = await _redisDb.ListRightPopLeftPushAsync(EvaluationQueueKey, ProcessingQueueKey);
+        var redisValue = await _redisDb.ListRightPopLeftPushAsync(
+            GetEvaluationQueueKey(gameMode),
+            GetProcessingQueueKey(gameMode));
 
         if (!redisValue.HasValue)
         {
@@ -54,9 +58,9 @@ public class MatchmakingQueue : IMatchmakingQueue
         return JsonSerializer.Deserialize<MatchmakingTicket>(json.ToString());
     }
 
-    public async ValueTask<Guid[]> GetCandidatesByMmrRangeAsync(PlayerRegion region,double minMmr, double maxMmr )
+    public async ValueTask<Guid[]> GetCandidatesByMmrRangeAsync(PlayerRegion region, GameMode gameMode, double minMmr, double maxMmr )
     {
-        var indexKey = $"Mmr_index:{region}";
+        var indexKey = GetMmrIndexKey(gameMode, region);
 
         var values = await _redisDb.SortedSetRangeByScoreAsync(indexKey, start: minMmr, stop: maxMmr);
 
@@ -71,11 +75,10 @@ public class MatchmakingQueue : IMatchmakingQueue
     public async ValueTask RemovePlayerAsync(MatchmakingTicket ticket)
     {
         var playerIdStr = ticket.PlayerId.ToString();
-        var indexKey = $"Mmr_index:{ticket.Region}";
 
         var hashTask = _redisDb.HashDeleteAsync(ActivePlayersHashKey, playerIdStr);
-        var setTask = _redisDb.SortedSetRemoveAsync(indexKey, playerIdStr);
-        var listTask = _redisDb.ListRemoveAsync(ProcessingQueueKey, playerIdStr);
+        var setTask = _redisDb.SortedSetRemoveAsync(GetMmrIndexKey(ticket.GameMode, ticket.Region), playerIdStr);
+        var listTask = _redisDb.ListRemoveAsync(GetProcessingQueueKey(ticket.GameMode), playerIdStr);
 
         await Task.WhenAll(hashTask, setTask, listTask);
     }

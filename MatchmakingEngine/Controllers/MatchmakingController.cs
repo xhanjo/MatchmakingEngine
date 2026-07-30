@@ -84,7 +84,7 @@ public class MatchmakingController : ControllerBase
 
     [Authorize(Roles = "Admin")]
     [HttpPost("complete/{matchId}")]
-    public async Task<IActionResult> CompleteMatch(Guid matchId, [FromQuery] Guid winnerId)
+    public async Task<IActionResult> CompleteMatch(Guid matchId)
     {
         var result = await _mediator.Send(new CompleteMatchCommand(matchId));
 

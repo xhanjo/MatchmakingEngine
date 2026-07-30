@@ -1,4 +1,4 @@
-﻿using MatchmakingEngine.Application.Interfaces;
+﻿using MatchmakingEngine.Application.DTO;
 using MatchmakingEngine.Application.Interfaces.Repositories;
 using MediatR;
 
@@ -25,7 +25,18 @@ public class GetMatchHistoryQueryHandler : IRequestHandler<GetMatchHistoryQuery,
         return matches.Select(m => new MatchDto(
             m.Id,
             m.Status,
-            m.CreatedAt
+            m.CreatedAt,
+            m.GameMode,
+            m.Players.Select(p => new MatchPlayerDto(
+               p.PlayerId,
+               p.Player.Username,
+               p.Accepted,
+               p.Kills,
+               p.Deaths,
+               p.Assists,
+               p.Score,
+               p.IsMvp
+             )).ToList()
             )).ToList();
     }
 }

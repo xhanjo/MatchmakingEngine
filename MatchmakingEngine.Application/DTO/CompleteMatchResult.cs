@@ -4,7 +4,7 @@ namespace MatchmakingEngine.DTO;
 
 public record CompleteMatchResult(
     string Message,
-    Guid WinningTeam,
+    int WinningTeam,
     Guid MvpPlayerId,
     string MvpUsername,
     List<PlayerStatsDto> Scoreboard,

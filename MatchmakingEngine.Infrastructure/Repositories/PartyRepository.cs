@@ -1,4 +1,4 @@
-﻿
+
 using MatchmakingEngine.Application.Interfaces.Repositories;
 using MatchmakingEngine.Data;
 using MatchmakingEngine.Domain;
@@ -32,6 +32,7 @@ public class PartyRepository : IPartyRepository
 
         return await query
             .Include(p => p.Members)
+                .ThenInclude(m => m.Player)
             .Include(p => p.Leader)
                 .ThenInclude(m => m.MatchPlayers)
                 .FirstOrDefaultAsync(p => p.Members.Any(m => m.PlayerId == playerId), cancellationToken);

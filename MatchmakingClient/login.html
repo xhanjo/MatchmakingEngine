@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MatchEngine — Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'app-bg':       '#07080f',
+                        'app-surface':  '#0d1018',
+                        'app-elevated': '#131825',
+                        'app-border':   '#1c2035',
+                        'brand':        '#6366f1',
+                        'brand-light':  '#818cf8',
+                    },
+                    fontFamily: {
+                        sans:    ['Inter', 'sans-serif'],
+                        display: ['Outfit', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-app-bg min-h-screen flex items-center justify-center font-sans p-4"
+      style="background: radial-gradient(ellipse at 60% 0%, rgba(99,102,241,0.08) 0%, #07080f 55%);">
+
+    <div class="w-full max-w-sm">
+
+        <!-- Logo -->
+        <div class="text-center mb-10">
+            <div class="inline-flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-display font-black text-lg"
+                     style="background: linear-gradient(135deg, #6366f1, #4f46e5); box-shadow: 0 0 30px rgba(99,102,241,0.4);">M</div>
+                <span class="font-display font-black text-2xl tracking-widest text-white">MATCHENGINE</span>
+            </div>
+            <p class="text-sm text-slate-500">Sign in to your account</p>
+        </div>
+
+        <!-- Card -->
+        <div class="bg-app-surface border border-app-border rounded-2xl p-8">
+            <form id="login-form" class="flex flex-col gap-5">
+
+                <div class="flex flex-col gap-2">
+                    <label for="username" class="text-xs font-display font-bold uppercase tracking-wider text-slate-500">Username</label>
+                    <input type="text" id="username" required autocomplete="username"
+                        class="auth-input" placeholder="Enter your username">
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <label for="password" class="text-xs font-display font-bold uppercase tracking-wider text-slate-500">Password</label>
+                    <input type="password" id="password" required autocomplete="current-password"
+                        class="auth-input" placeholder="••••••••">
+                </div>
+
+                <button type="submit" id="submit-btn"
+                    class="w-full py-3 rounded-xl font-display font-bold text-base uppercase tracking-widest text-white mt-2 transition-all"
+                    style="background: linear-gradient(135deg, #6366f1, #4f46e5); box-shadow: 0 0 25px rgba(99,102,241,0.35);">
+                    Sign In
+                </button>
+            </form>
+
+            <p class="text-center text-sm text-slate-600 mt-6">
+                No account? <a href="register.html" class="text-brand-light hover:text-white transition-colors font-medium">Register here</a>
+            </p>
+        </div>
+
+        <!-- Decorative lines -->
+        <div class="flex items-center gap-3 mt-8 opacity-20">
+            <div class="flex-1 h-px bg-app-border"></div>
+            <span class="text-xs text-slate-600 font-display">SECURE LOGIN</span>
+            <div class="flex-1 h-px bg-app-border"></div>
+        </div>
+    </div>
+
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submit-btn');
+            btn.innerText = 'Signing in…';
+            btn.disabled = true;
+            btn.style.opacity = '0.6';
+
+            try {
+                const u = document.getElementById('username').value;
+                const p = document.getElementById('password').value;
+                const res = await Api.login(u, p);
+                Auth.setToken(res.token);
+                Utils.showToast('Welcome back!', 'success');
+                setTimeout(() => window.location.href = 'index.html', 400);
+            } catch (error) {
+                Utils.showToast(error.message || 'Invalid credentials', 'error');
+                btn.innerText = 'Sign In';
+                btn.disabled = false;
+                btn.style.opacity = '1';
+            }
+        });
+
+        // Redirect if already logged in
+        if (Auth.isLoggedIn()) window.location.href = 'index.html';
+    </script>
+</body>
+</html>

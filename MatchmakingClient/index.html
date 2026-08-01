@@ -3,132 +3,235 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MatchLite</title>
-    <link rel="stylesheet" href="style.css">
+    <title>MatchEngine — Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'app-bg':       '#07080f',
+                        'app-surface':  '#0d1018',
+                        'app-elevated': '#131825',
+                        'app-border':   '#1c2035',
+                        'app-muted':    '#252a3d',
+                        'brand':        '#6366f1',
+                        'brand-light':  '#818cf8',
+                        'brand-dark':   '#4f46e5',
+                        'hi':           '#22d3ee',
+                        'safe':         '#10b981',
+                        'warn':         '#f59e0b',
+                        'danger':       '#ef4444',
+                    },
+                    fontFamily: {
+                        sans:    ['Inter', 'sans-serif'],
+                        display: ['Outfit', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
 </head>
-<body>
-    <div class="container" id="main-container">
-        <div class="logo">MATCH<span>LITE</span></div>
+<body class="bg-app-bg text-slate-300 min-h-screen flex flex-col font-sans select-none">
 
-        <!-- Auth Section -->
-        <div id="auth-section">
-            <div class="form-group">
-                <label for="username">Нікнейм</label>
-                <input type="text" id="username" placeholder="Введіть ваш нікнейм" autocomplete="off">
+    <!-- ══════════════════════════════════════════
+         TOP NAVBAR
+         ══════════════════════════════════════════ -->
+    <header class="bg-app-surface border-b border-app-border sticky top-0 z-50">
+        <div class="flex items-center h-14 px-6 gap-6">
+
+            <!-- Logo -->
+            <div class="flex items-center gap-2 shrink-0">
+                <div class="w-7 h-7 rounded-lg flex items-center justify-center text-white text-sm font-display font-black" style="background: linear-gradient(135deg, #6366f1, #4f46e5);">M</div>
+                <span class="font-display font-bold text-base tracking-widest text-white">MATCHENGINE</span>
             </div>
-            <div class="form-group">
-                <label for="password">Пароль</label>
-                <div class="password-wrapper">
-                    <input type="password" id="password" placeholder="Введіть пароль">
-                    <button type="button" class="toggle-password" onclick="togglePassword()" aria-label="Toggle password visibility">
-                        <svg id="eye-icon-open" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                            <circle cx="12" cy="12" r="3"/>
-                        </svg>
-                        <svg id="eye-icon-closed" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
-                            <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
-                            <line x1="1" y1="1" x2="23" y2="23"/>
-                        </svg>
-                    </button>
-                </div>
+
+            <div class="flex-1"></div>
+
+            <!-- Right side: username + actions -->
+            <div class="flex items-center gap-3" id="user-actions">
+                <button
+                    id="username-display"
+                    onclick="App.showProfile()"
+                    class="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all hover:bg-app-elevated group cursor-pointer border-0 bg-transparent"
+                    title="View Profile">
+                    <div class="w-7 h-7 rounded-full bg-brand flex items-center justify-center text-white text-xs font-display font-bold">?</div>
+                    <span class="text-sm font-medium text-slate-200 group-hover:text-white">Player</span>
+                </button>
+                <button
+                    id="logout-btn"
+                    class="text-xs px-3 py-1.5 rounded-lg font-display font-semibold tracking-wider uppercase transition-all border border-app-border text-slate-500 hover:border-danger hover:text-danger">
+                    Logout
+                </button>
             </div>
-            <div class="form-group">
-                <label for="region">Регіон</label>
-                <select id="region">
-                    <option value="1">Europe West (EUW)</option>
-                    <option value="2">Europe East (EUE)</option>
-                    <option value="3">North America (NA)</option>
-                    <option value="4">Asia</option>
-                </select>
-            </div>
-            <button onclick="login()">Увійти</button>
-            <button onclick="register()" class="secondary">Зареєструватися</button>
-            <p id="auth-error" class="error"></p>
         </div>
+    </header>
 
-        <!-- Lobby Section -->
-        <div id="lobby-section" style="display: none;">
-            
-            <div class="profile-card">
-                <img src="" alt="Avatar" class="avatar" id="player-avatar">
-                <div class="profile-info">
-                    <h3 id="player-name">Loading...</h3>
-                    <p class="rating"><span id="player-mmr">---</span> MMR</p>
+    <!-- ══════════════════════════════════════════
+         MAIN LAYOUT
+         ══════════════════════════════════════════ -->
+    <div class="flex flex-1 overflow-hidden">
+
+        <!-- ── Left: Matchmaking Area ── -->
+        <main class="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
+
+            <!-- Matchmaking Card -->
+            <div class="bg-app-surface border border-app-border rounded-2xl p-10 flex flex-col items-center gap-5">
+
+                <button id="find-match-btn" class="find-match-base find-match-idle">
+                    FIND MATCH
+                </button>
+
+                <div id="match-status-text" class="text-sm text-slate-500 min-h-5 text-center tracking-wide"></div>
+
+                <!-- ── Party / Lobby Section ── -->
+                <div id="party-wrapper" class="w-full max-w-sm pt-4 mt-2 border-t border-app-border">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="font-display font-bold text-xs uppercase tracking-widest text-slate-500">Lobby</span>
+                        <button id="create-party-btn"
+                            class="text-xs px-3 py-1.5 rounded-lg font-display font-semibold uppercase tracking-wider transition-all"
+                            style="background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.2); color: #818cf8;">
+                            + Create Duo Lobby
+                        </button>
+                    </div>
+
+                    <!-- Party container (shown when in a party) -->
+                    <div id="party-container" style="display:none;">
+                        <div id="party-members-list" class="flex flex-col gap-2 mb-3"></div>
+                        <button id="leave-party-btn"
+                            class="w-full py-2 rounded-lg text-xs font-display font-bold uppercase tracking-wider transition-all"
+                            style="background: rgba(239,68,68,0.07); border: 1px solid rgba(239,68,68,0.2); color: #f87171; display:none;">
+                            Leave Party
+                        </button>
+                    </div>
                 </div>
-                <button onclick="logout()" class="logout-btn">Вийти</button>
             </div>
 
-            <div class="match-info">
-                <div class="timer" id="search-timer">00:00</div>
-                <div class="status-text" id="match-status">Готовий до гри</div>
+        </main>
+
+        <!-- ── Right: Friends & Search Sidebar ── -->
+        <aside class="w-72 shrink-0 bg-app-surface border-l border-app-border flex flex-col overflow-hidden">
+
+            <!-- Player Search -->
+            <div class="p-4 border-b border-app-border">
+                <p class="font-display font-bold text-xs uppercase tracking-widest text-slate-500 mb-3">Find Players</p>
+                <div class="relative">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 text-xs pointer-events-none">🔍</span>
+                    <input
+                        id="player-search"
+                        type="text"
+                        placeholder="Search by name…"
+                        class="auth-input text-sm !py-2 !pl-8 !rounded-lg">
+                </div>
+                <div id="search-results" class="mt-2"></div>
             </div>
 
-            <div class="matchmaking-controls" id="matchmaking-controls">
-                <button id="find-match-btn" onclick="findMatch()">Знайти матч</button>
-                <button id="cancel-match-btn" onclick="cancelMatch()" class="danger" style="display: none;">Відмінити пошук</button>
+            <!-- Friends List -->
+            <div class="flex-1 overflow-y-auto p-4">
+                <p class="font-display font-bold text-xs uppercase tracking-widest text-slate-500 mb-3">Friends</p>
+                <div id="pending-requests" class="mb-2"></div>
+                <div id="friends-list"></div>
             </div>
 
-            <button id="admin-panel-btn" onclick="openAdminPanel()" class="secondary" style="display: none;">Адмін Панель</button>
+        </aside>
+    </div>
 
-            <p class="hint" id="lobby-hint">Натисніть кнопку вище, щоб стати в чергу на пошук гри.</p>
-        </div>
+    <!-- ══════════════════════════════════════════
+         MATCH FOUND MODAL
+         ══════════════════════════════════════════ -->
+    <div id="match-modal" class="modal-overlay">
+        <div class="modal-card match-modal-card"
+            style="background: linear-gradient(160deg, #0f1a14 0%, #07080f 100%);
+                   border: 2px solid #10b981;
+                   border-radius: 22px;
+                   padding: 40px 36px;
+                   text-align: center;
+                   width: 100%;
+                   max-width: 400px;">
 
-        <!-- Admin Panel Section -->
-        <div id="admin-section" style="display: none;">
-            <div class="admin-header">
-                <h2>Адмін Панель</h2>
-                <div class="admin-controls">
-                    <button onclick="loadAdminData()" class="secondary">Оновити</button>
-                    <button onclick="closeAdminPanel()" class="danger">Назад</button>
-                </div>
+            <p class="match-found-title font-display font-black text-safe text-3xl uppercase tracking-widest mb-6"
+               style="text-shadow: 0 0 25px rgba(16,185,129,0.7);">MATCH FOUND</p>
+
+            <!-- Countdown timer -->
+            <div class="timer-container" style="position:relative; width:110px; height:110px; margin: 0 auto 28px;">
+                <svg class="timer-circle" viewBox="0 0 100 100">
+                    <circle class="bg-stroke" cx="50" cy="50" r="45"></circle>
+                    <circle class="progress-stroke" cx="50" cy="50" r="45"></circle>
+                </svg>
+                <div id="timer-text"
+                     class="font-display font-black text-3xl text-white"
+                     style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);">30</div>
             </div>
 
-            <div class="admin-tables">
-                <h3>Гравці</h3>
-                <div class="table-wrapper">
-                    <table id="players-table">
-                        <thead>
-                            <tr>
-                                <th>Username</th>
-                                <th>MMR</th>
-                                <th>Region</th>
-                                <th>Role</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-
-                <h3 style="margin-top: 20px;">Матчі</h3>
-                <div class="table-wrapper">
-                    <table id="matches-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Status</th>
-                                <th>Avg MMR</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
+            <div class="flex flex-col gap-3">
+                <button id="accept-match-btn"
+                    class="w-full py-4 rounded-xl font-display font-black text-lg uppercase tracking-widest text-white transition-all"
+                    style="background: #059669; box-shadow: 0 0 25px rgba(16,185,129,0.4);">
+                    ACCEPT
+                </button>
+                <button id="decline-match-btn"
+                    class="w-full py-3 rounded-xl font-display font-bold text-sm uppercase tracking-wider transition-all"
+                    style="background: rgba(239,68,68,0.07); border: 1px solid rgba(239,68,68,0.25); color: #f87171;">
+                    DECLINE
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- Match Found Modal (Dota Style) -->
-    <div class="modal-overlay" id="match-modal">
-        <div class="modal-content">
-            <h1 class="glow-text">MATCH FOUND</h1>
-            <p>Гру знайдено! Натисніть кнопку, щоб підтвердити готовність.</p>
-            <button onclick="acceptMatch()" class="success-btn" id="accept-match-btn">ПРИЙНЯТИ</button>
-            <button onclick="declineMatch()" class="danger" id="decline-match-btn" style="margin-top: 10px;">ВІДХИЛИТИ</button>
-            <p id="accept-status" class="hint"></p>
+    <!-- ══════════════════════════════════════════
+         PARTY INVITE MODAL
+         ══════════════════════════════════════════ -->
+    <div id="invite-modal" class="modal-overlay">
+        <div class="modal-card bg-app-elevated border border-app-border rounded-2xl p-10 text-center max-w-sm w-full">
+            <div class="text-5xl mb-5">🎮</div>
+            <h2 class="font-display font-bold text-xl text-white mb-2">Party Invite</h2>
+            <p id="invite-text" class="text-sm text-slate-500 mb-8">You received a party invite!</p>
+            <div class="flex gap-3">
+                <button id="accept-invite-btn"
+                    class="flex-1 py-3 rounded-xl font-display font-bold text-sm uppercase tracking-wider text-white transition-all"
+                    style="background: #6366f1;">Accept</button>
+                <button id="decline-invite-btn"
+                    class="flex-1 py-3 rounded-xl font-display font-bold text-sm uppercase tracking-wider transition-all"
+                    style="background: rgba(255,255,255,0.04); border: 1px solid #1c2035; color: #475569;">Decline</button>
+            </div>
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <!-- ══════════════════════════════════════════
+         PROFILE MODAL
+         ══════════════════════════════════════════ -->
+    <div id="profile-modal" class="modal-overlay">
+        <div class="modal-card bg-app-surface border border-app-border rounded-2xl max-w-xl w-full overflow-hidden flex flex-col"
+             style="max-height: 85vh;">
+
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-app-border shrink-0">
+                <h2 class="font-display font-bold text-lg text-white">Player Profile</h2>
+                <button onclick="document.getElementById('profile-modal').classList.remove('active')"
+                    class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-white hover:bg-app-elevated transition-all text-sm">✕</button>
+            </div>
+
+            <!-- Stats -->
+            <div id="profile-stats" class="px-6 py-5 border-b border-app-border shrink-0"></div>
+
+            <!-- Match History -->
+            <div class="px-6 py-5 flex-1 overflow-y-auto">
+                <p class="font-display font-bold text-xs uppercase tracking-widest text-slate-500 mb-4">Recent Matches</p>
+                <div id="profile-history"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/signalr-manager.js"></script>
+    <script src="js/app.js"></script>
 </body>
 </html>

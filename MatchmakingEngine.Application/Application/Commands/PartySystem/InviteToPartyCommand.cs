@@ -1,4 +1,4 @@
-﻿using MatchmakingEngine.Application.Interfaces.Repositories;
+using MatchmakingEngine.Application.Interfaces.Repositories;
 using MediatR;
 using MatchmakingEngine.Domain.Exceptions;
 using System;
@@ -9,16 +9,19 @@ namespace MatchmakingEngine.Application.Application.Commands.PartySystem;
 
 public record InviteToPartyResult(Guid PartyId);
 public record InviteToPartyCommand(Guid InviteId, Guid FriendId) : IRequest<InviteToPartyResult>;
+public record PartyInviteCache(Guid PartyId, Guid SenderId);
 
 public class InviteToPartyCommandHandler : IRequestHandler<InviteToPartyCommand, InviteToPartyResult>
 {
     private readonly IPartyRepository _partyRepository;
     private readonly IFriendshipRepository _friendshipRepository;
+    private readonly MatchmakingEngine.Application.Interfaces.ICacheService _cacheService;
 
-    public InviteToPartyCommandHandler(IPartyRepository partyRepository, IFriendshipRepository friendshipRepository)
+    public InviteToPartyCommandHandler(IPartyRepository partyRepository, IFriendshipRepository friendshipRepository, MatchmakingEngine.Application.Interfaces.ICacheService cacheService)
     {
         _partyRepository = partyRepository;
         _friendshipRepository = friendshipRepository;
+        _cacheService = cacheService;
     }
 
     public async Task<InviteToPartyResult> Handle(InviteToPartyCommand request, CancellationToken cancellationToken)
@@ -36,6 +39,9 @@ public class InviteToPartyCommandHandler : IRequestHandler<InviteToPartyCommand,
         var friendship = await _friendshipRepository.GetBetweenPlayersAsync(request.InviteId, request.FriendId, cancellationToken);
         if (friendship == null || friendship.Status != MatchmakingEngine.Domain.FriendshipStatus.Accepted)
             throw new ConflictException("You can only invite accepted friends.");
+
+        var cacheKey = $"party_invite:{request.FriendId}:{party.Id}";
+        await _cacheService.GetOrCreateAsync(cacheKey, () => Task.FromResult(new PartyInviteCache(party.Id, request.InviteId)), TimeSpan.FromMinutes(5));
 
         return new InviteToPartyResult(party.Id);
     }

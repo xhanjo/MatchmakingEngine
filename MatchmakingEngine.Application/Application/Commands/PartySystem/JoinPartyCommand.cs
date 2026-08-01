@@ -1,4 +1,4 @@
-﻿using MatchmakingEngine.Application.Application.Queries.MatchHistory;
+using MatchmakingEngine.Application.Application.Queries.MatchHistory;
 using MatchmakingEngine.Application.DTO;
 using MatchmakingEngine.Application.Interfaces.Repositories;
 using MatchmakingEngine.Domain;
@@ -15,16 +15,23 @@ public class JoinPartyCommandHandler : IRequestHandler<JoinPartyCommand, PartyDt
     private readonly IPartyRepository _partyRepository;
     private readonly IPlayerRepository _playerRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly MatchmakingEngine.Application.Interfaces.ICacheService _cacheService;
 
-    public JoinPartyCommandHandler(IPartyRepository partyRepository, IPlayerRepository playerRepository, IUnitOfWork unitOfWork)
+    public JoinPartyCommandHandler(IPartyRepository partyRepository, IPlayerRepository playerRepository, IUnitOfWork unitOfWork, MatchmakingEngine.Application.Interfaces.ICacheService cacheService)
     {
         _partyRepository = partyRepository;
         _playerRepository = playerRepository;
         _unitOfWork = unitOfWork;
+        _cacheService = cacheService;
     }
 
     public async Task<PartyDto> Handle(JoinPartyCommand request, CancellationToken cancellationToken)
     {
+        var cacheKey = $"party_invite:{request.PlayerId}:{request.PartyId}";
+        var invite = await _cacheService.GetOrCreateAsync(cacheKey, () => Task.FromResult<PartyInviteCache?>(null));
+        if (invite == null)
+            throw new ConflictException("You don't have a valid invite to this party.");
+
         var existingParty = await _partyRepository.GetPartyByPlayerIdAsync(request.PlayerId, trackChanges: false, cancellationToken);
         if (existingParty != null)
             throw new ConflictException("You are already in a party.");
@@ -47,6 +54,8 @@ public class JoinPartyCommandHandler : IRequestHandler<JoinPartyCommand, PartyDt
             Player = player
         };
         party.Members.Add(newMember);
+
+        await _cacheService.RemoveAsync(cacheKey, cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

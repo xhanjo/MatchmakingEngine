@@ -1,4 +1,4 @@
-﻿using MatchmakingEngine.Application.Application.Commands.PartySystem;
+using MatchmakingEngine.Application.Application.Commands.PartySystem;
 using MatchmakingEngine.Application.Application.Queries.PartySystem;
 using MatchmakingEngine.Domain;
 using MatchmakingEngine.Hubs;
@@ -44,7 +44,7 @@ public class PartyController : ControllerBase
 
         var result = await _mediator.Send(new InviteToPartyCommand(playerId, friendId));
 
-        await _hubContext.Clients.User(friendId.ToString())
+        await _hubContext.Clients.Group(friendId.ToString())
             .SendAsync("PartyInviteReceived", result.PartyId, playerId);
 
         return Ok(new { success = true });
@@ -55,7 +55,7 @@ public class PartyController : ControllerBase
     {
         var result = await _mediator.Send(new JoinPartyCommand(GetPlayerId(), partyId));
 
-        await _hubContext.Clients.User(result.LeaderId.ToString())
+        await _hubContext.Clients.Group(result.LeaderId.ToString())
             .SendAsync("PlayerJoinedParty", GetPlayerId());
 
         return Ok(result);

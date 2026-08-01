@@ -1,4 +1,4 @@
-﻿using MatchmakingEngine.Application.DTO;
+using MatchmakingEngine.Application.DTO;
 using MatchmakingEngine.Application.Interfaces.Repositories;
 using MatchmakingEngine.Domain;
 using MatchmakingEngine.Domain.Exceptions;
@@ -23,6 +23,9 @@ public class CreatePartyCommandHandler : IRequestHandler<CreatePartyCommand, Par
 
     public async Task<PartyDto> Handle(CreatePartyCommand request, CancellationToken cancellationToken)
     {
+        if (request.GameMode == GameMode.Solo)
+            throw new ConflictException("Cannot create a party for Solo mode. Use matchmaking directly.");
+
         var existingParty = await _partyRepository.GetPartyByPlayerIdAsync(request.LeaderId, trackChanges: false, cancellationToken);
         if (existingParty != null)
             throw new ConflictException("You are already in a party");

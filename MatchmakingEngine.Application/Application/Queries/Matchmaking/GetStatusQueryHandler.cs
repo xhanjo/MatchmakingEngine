@@ -24,8 +24,12 @@ public class GetStatusQueryHandler : IRequestHandler<GetStatusQuery, PollingStat
     
         if (match != null)
         {
+            string statusStr = match.Status == MatchStatus.Pending 
+                ? PollingStatus.MatchFound.ToString() 
+                : PollingStatus.InGame.ToString();
+
             return new PollingStatusResponseDto(
-                PollingStatus.MatchFound.ToString(),
+                statusStr,
                 match.Id,
                 match.AverageMmr,
                 match.CreatedAt

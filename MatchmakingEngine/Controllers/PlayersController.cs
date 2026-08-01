@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using MediatR;
 using MatchmakingEngine.DTO;
 using MatchmakingEngine.Application.Queries.Players;
@@ -41,4 +41,15 @@ public class PlayersController : ControllerBase
         return StatusCode(201, result);
     }
 
+    [HttpGet("my/history")]
+    public async Task<IActionResult> GetMyHistory()
+    {
+        var playerIdStr = User.FindFirst("PlayerId")?.Value;
+        if (string.IsNullOrEmpty(playerIdStr))
+            return Unauthorized();
+            
+        var playerId = Guid.Parse(playerIdStr);
+        var result = await _mediator.Send(new MatchmakingEngine.Application.Application.Queries.MatchHistory.GetMatchHistoryQuery(playerId));
+        return Ok(result);
+    }
 }

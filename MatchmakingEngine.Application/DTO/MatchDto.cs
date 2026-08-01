@@ -1,4 +1,4 @@
-﻿using MatchmakingEngine.Domain;
+using MatchmakingEngine.Domain;
 
 namespace MatchmakingEngine.Application.DTO;
 
@@ -10,7 +10,9 @@ public record MatchPlayerDto(
     int Deaths,
     int Assists,
     int Score,
-    bool IsMvp
+    bool IsMvp,
+    int Team,
+    bool IsWinner
 );
 
 public record MatchDto(

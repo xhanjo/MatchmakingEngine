@@ -1,13 +1,13 @@
-﻿using MatchmakingEngine.Application.Interfaces.Repositories;
+using MatchmakingEngine.Application.Interfaces.Repositories;
 using MediatR;
 using MatchmakingEngine.Domain.Exceptions;
 using System.Security;
 
 namespace MatchmakingEngine.Application.Application.Commands.Friends;
 
-public record DeclineFriendRequestCommand(Guid RequestId, Guid PlayerId) : IRequest<bool>;
+public record DeclineFriendRequestCommand(Guid RequestId, Guid PlayerId) : IRequest<Guid?>;
 
-public class DeclineFriendRequestCommandHandle : IRequestHandler<DeclineFriendRequestCommand, bool>
+public class DeclineFriendRequestCommandHandle : IRequestHandler<DeclineFriendRequestCommand, Guid?>
 {
     private readonly IFriendshipRepository _friendshipRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -18,7 +18,7 @@ public class DeclineFriendRequestCommandHandle : IRequestHandler<DeclineFriendRe
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<bool> Handle(DeclineFriendRequestCommand request, CancellationToken cancellationToken)
+    public async Task<Guid?> Handle(DeclineFriendRequestCommand request, CancellationToken cancellationToken)
     {
         var friendship = await _friendshipRepository.GetByIdAsync(request.RequestId, trackChanges: true, cancellationToken);
 
@@ -36,6 +36,6 @@ public class DeclineFriendRequestCommandHandle : IRequestHandler<DeclineFriendRe
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return true;
+        return friendship.SenderId;
     }
 }

@@ -1,4 +1,4 @@
-﻿using MatchmakingEngine.Domain;
+using MatchmakingEngine.Domain;
 using MatchmakingEngine.Application.Interfaces.Repositories;
 using Microsoft.AspNetCore.SignalR;
 using MatchmakingEngine.Hubs;
@@ -142,8 +142,10 @@ public class MatchmakingWorker : BackgroundService
 
         foreach (var player in match.Players)
         {
-            await _hubContext.Clients.User(player.PlayerId.ToString()).SendAsync("MatchFound", match.Id, cancellationToken);
+            await _hubContext.Clients.Group(player.PlayerId.ToString()).SendAsync("MatchFound", match.Id, cancellationToken);
         }
+
+        await _hubContext.Clients.Group("Admins").SendAsync("AdminMatchesUpdated", cancellationToken);
 
         _logger.LogInformation("Match {MatchId} created (Mode: {Mode})", match.Id, match.GameMode);
     }

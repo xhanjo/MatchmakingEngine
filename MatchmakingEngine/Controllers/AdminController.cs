@@ -1,4 +1,5 @@
-﻿using MatchmakingEngine.Application.Interfaces.Repositories;
+using MatchmakingEngine.Application.Interfaces.Repositories;
+using MatchmakingEngine.Domain;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -25,9 +26,29 @@ public class AdminController : ControllerBase
         {
             Id = m.Id,
             Status = m.Status.ToString(),
-            AverageMmr = m.AverageMmr
+            AverageMmr = m.AverageMmr,
+            GameMode = m.GameMode.ToString(),
+            CreatedAt = m.CreatedAt,
+            PlayerCount = m.Players?.Count ?? 0
         });
 
+        return Ok(result);
+    }
+
+    [HttpGet("active-matches")]
+    public async Task<IActionResult> GetActiveMatches()
+    {
+        var matches = await _matchRepository.GetAllMatchesAsync();
+        var active = matches.Where(m => m.Status == MatchStatus.Pending || m.Status == MatchStatus.Accepted);
+        var result = active.Select(m => new
+        {
+            Id = m.Id,
+            Status = m.Status.ToString(),
+            AverageMmr = m.AverageMmr,
+            GameMode = m.GameMode.ToString(),
+            CreatedAt = m.CreatedAt,
+            PlayerCount = m.Players?.Count ?? 0
+        });
         return Ok(result);
     }
 }

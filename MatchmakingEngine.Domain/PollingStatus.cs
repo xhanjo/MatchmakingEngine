@@ -1,8 +1,9 @@
-﻿namespace MatchmakingEngine.Domain;
+namespace MatchmakingEngine.Domain;
 
 public enum PollingStatus
 {
     Idle,
     Searching,
-    MatchFound
+    MatchFound,
+    InGame
 }

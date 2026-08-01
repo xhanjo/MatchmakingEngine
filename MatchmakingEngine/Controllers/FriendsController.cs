@@ -3,6 +3,7 @@ using MatchmakingEngine.Application.Application.Queries.Friends;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
 
 namespace MatchmakingEngine.Controllers;
@@ -13,10 +14,12 @@ namespace MatchmakingEngine.Controllers;
 public class FriendsController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly Microsoft.AspNetCore.SignalR.IHubContext<MatchmakingEngine.Hubs.MatchmakingHub> _hubContext;
 
-    public FriendsController(IMediator mediator)
+    public FriendsController(IMediator mediator, Microsoft.AspNetCore.SignalR.IHubContext<MatchmakingEngine.Hubs.MatchmakingHub> hubContext)
     {
         _mediator = mediator;
+        _hubContext = hubContext;
     }
 
     private Guid GetPlayerId()
@@ -29,28 +32,36 @@ public class FriendsController : ControllerBase
     public async Task<IActionResult> SendRequest(Guid targetPlayerId)
     {
         var result = await _mediator.Send(new SendFriendRequestCommand(GetPlayerId(), targetPlayerId));
+        if (result)
+            await _hubContext.Clients.Group(targetPlayerId.ToString()).SendAsync("FriendsUpdated");
         return Ok(new { success = result });
     }
 
     [HttpPost("accept/{requestId}")]
     public async Task<IActionResult> AcceptRequest(Guid requestId)
     {
-        var result = await _mediator.Send(new AcceptFriendRequestCommand(requestId, GetPlayerId()));
-        return Ok(new { success = result });
+        var otherPlayerId = await _mediator.Send(new AcceptFriendRequestCommand(requestId, GetPlayerId()));
+        if (otherPlayerId != null)
+            await _hubContext.Clients.Group(otherPlayerId.ToString()).SendAsync("FriendsUpdated");
+        return Ok(new { success = otherPlayerId != null });
     }
 
     [HttpPost("decline/{requestId}")]
     public async Task<IActionResult> DeclineRequest(Guid requestId)
     {
-        var result = await _mediator.Send(new DeclineFriendRequestCommand(requestId, GetPlayerId()));
-        return Ok(new { success = result });
+        var otherPlayerId = await _mediator.Send(new DeclineFriendRequestCommand(requestId, GetPlayerId()));
+        if (otherPlayerId != null)
+            await _hubContext.Clients.Group(otherPlayerId.ToString()).SendAsync("FriendsUpdated");
+        return Ok(new { success = otherPlayerId != null });
     }
 
     [HttpDelete("{friendshipId}")]
     public async Task<IActionResult> RemoveFriend(Guid friendshipId)
     {
-        var result = await _mediator.Send(new RemoveFriendCommand(friendshipId, GetPlayerId()));
-        return Ok(new { success = result });
+        var otherPlayerId = await _mediator.Send(new RemoveFriendCommand(friendshipId, GetPlayerId()));
+        if (otherPlayerId != null)
+            await _hubContext.Clients.Group(otherPlayerId.ToString()).SendAsync("FriendsUpdated");
+        return Ok(new { success = otherPlayerId != null });
     }
 
     [HttpGet]

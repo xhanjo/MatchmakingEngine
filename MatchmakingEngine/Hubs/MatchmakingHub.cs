@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.Authorization;
 
 namespace MatchmakingEngine.Hubs;
@@ -16,10 +16,16 @@ public class MatchmakingHub : Hub
     public override async Task OnConnectedAsync()
     {
         var playerIdString = Context.User?.FindFirst("PlayerId")?.Value;
+        var roleString = Context.User?.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
 
         if (!string.IsNullOrEmpty(playerIdString))
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, playerIdString!);
+
+            if (roleString == "Admin")
+            {
+                await Groups.AddToGroupAsync(Context.ConnectionId, "Admins");
+            }
 
             _logger.LogInformation("Verified Player {PlayerId} connected. ConnectionId: {ConnectionId}",
                playerIdString, Context.ConnectionId);

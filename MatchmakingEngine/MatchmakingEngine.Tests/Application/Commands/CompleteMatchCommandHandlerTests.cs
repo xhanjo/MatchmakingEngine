@@ -18,6 +18,7 @@ public class CompleteMatchCommandHandlerTests
     private readonly Mock<IMatchRepository> _matchRepositoryMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<ILogger<CompleteMatchCommandHandler>> _loggerMock;
+    private readonly Mock<global::MatchmakingEngine.Application.Interfaces.ICacheService> _cacheServiceMock;
     private readonly CompleteMatchCommandHandler _handler;
 
     public CompleteMatchCommandHandlerTests()
@@ -25,11 +26,13 @@ public class CompleteMatchCommandHandlerTests
         _matchRepositoryMock = new Mock<IMatchRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _loggerMock = new Mock<ILogger<CompleteMatchCommandHandler>>();
+        _cacheServiceMock = new Mock<global::MatchmakingEngine.Application.Interfaces.ICacheService>();
 
         _handler = new CompleteMatchCommandHandler(
             _matchRepositoryMock.Object,
             _unitOfWorkMock.Object,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            _cacheServiceMock.Object);
     }
 
     [Fact]

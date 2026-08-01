@@ -1,9 +1,10 @@
-﻿using MatchmakingEngine.Domain;
+using MatchmakingEngine.Domain;
 
 namespace MatchmakingEngine.DTO;
 
 public record AcceptMatchResult(
     string StatusMessage,
     bool AllAccepted,
-    MatchStatus MatchStatus
+    MatchStatus MatchStatus,
+    List<Guid> PlayerIds
     );

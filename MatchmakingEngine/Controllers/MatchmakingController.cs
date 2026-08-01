@@ -1,4 +1,4 @@
-﻿using MatchmakingEngine.Application.Application.Commands.Matchmaking;
+using MatchmakingEngine.Application.Application.Commands.Matchmaking;
 using MatchmakingEngine.Application.Commands.Matchmaking;
 using MatchmakingEngine.Application.Queries.Matchmaking;
 using MatchmakingEngine.DTO;
@@ -62,6 +62,15 @@ public class MatchmakingController : ControllerBase
         var playerId = GetPlayerIdFromToken();
         var result = await _mediator.Send(new AcceptMatchCommand(playerId, matchId));
 
+        if (result.AllAccepted && result.PlayerIds != null)
+        {
+            foreach (var pid in result.PlayerIds)
+            {
+                await _hubContext.Clients.Group(pid.ToString()).SendAsync("MatchStarted", matchId);
+            }
+            await _hubContext.Clients.Group("Admins").SendAsync("AdminMatchesUpdated");
+        }
+
         return Ok(result);
     }
 
@@ -72,11 +81,15 @@ public class MatchmakingController : ControllerBase
         if (!Guid.TryParse(playerIdStr, out var playerId))
             return Unauthorized();
 
-        var result = await _mediator.Send(new DeclineMatchCommand(matchId, playerId));
-        if (!result)
+        var playerIds = await _mediator.Send(new DeclineMatchCommand(matchId, playerId));
+        if (playerIds == null || !playerIds.Any())
             return BadRequest("Cannot decline match.");
 
-        await _hubContext.Clients.Group(matchId.ToString()).SendAsync("MatchCanceled");
+        foreach (var pid in playerIds)
+        {
+            await _hubContext.Clients.Group(pid.ToString()).SendAsync("MatchCanceled");
+        }
+        await _hubContext.Clients.Group("Admins").SendAsync("AdminMatchesUpdated");
         
         return Ok();
     }
@@ -87,6 +100,13 @@ public class MatchmakingController : ControllerBase
     public async Task<IActionResult> CompleteMatch(Guid matchId)
     {
         var result = await _mediator.Send(new CompleteMatchCommand(matchId));
+
+        foreach(var player in result.Scoreboard)
+        {
+            await _hubContext.Clients.Group(player.PlayerId.ToString()).SendAsync("MatchFinished", result);
+        }
+
+        await _hubContext.Clients.Group("Admins").SendAsync("AdminMatchesUpdated");
 
         return Ok(result);
     }

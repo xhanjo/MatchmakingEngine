@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using MatchmakingEngine.Domain;
 using MatchmakingEngine.DTO;
 using MatchmakingEngine.Domain.Exceptions;
@@ -40,23 +40,26 @@ public class AcceptMatchCommandHandler : IRequestHandler<AcceptMatchCommand, Acc
             throw new ConflictException("You are not a participant in this match.");
 
         playerInMatch.Accepted = true;
-
-        bool allAccepted = match.Players.All(p => p.Accepted);
-
-        if (allAccepted)
-        {
-            match.Status = MatchStatus.Accepted;
-            _logger.LogInformation("[GAME START] All player accepted! Match {MatchId} is starting!", match.Id);
-        }
-
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        string statusMesage = match.Status == MatchStatus.Accepted ? "Match Started" : "Waiting for other player";
+        // Fetch fresh state WITHOUT tracking to bypass EF Core's local cache
+        var freshMatch = await _matchRepository.GetByIdWithPlayersAsync(request.MatchId, trackChanges: false, cancellationToken);
+        bool allAccepted = freshMatch?.Players.All(p => p.Accepted) ?? false;
+
+        if (allAccepted && match.Status == MatchStatus.Pending)
+        {
+            match.Status = MatchStatus.Accepted;
+            _logger.LogInformation("[GAME START] All players accepted! Match {MatchId} is starting!", match.Id);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+
+        string statusMessage = match.Status == MatchStatus.Accepted ? "Match Started" : "Waiting for other player";
 
         return new AcceptMatchResult(
-            statusMesage,
+            statusMessage,
             allAccepted,
-            match.Status
+            match.Status,
+            freshMatch?.Players.Select(p => p.PlayerId).ToList() ?? new List<Guid>()
         );
     }
 }

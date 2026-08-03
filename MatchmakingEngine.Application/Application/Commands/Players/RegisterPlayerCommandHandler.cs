@@ -13,20 +13,21 @@ public class RegisterPlayerCommandHandler : IRequestHandler<RegisterPlayerComman
     private readonly IPlayerRepository _playerRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICacheService _cacheService;
-
+    private readonly ILeaderboardService _leaderboardService;
     public RegisterPlayerCommandHandler(
         IPlayerRepository playerRepository,
         IUnitOfWork unitOfWork,
-        ICacheService cacheService)
+        ICacheService cacheService,
+        ILeaderboardService leaderboardService)
     {
         _playerRepository = playerRepository;
         _unitOfWork = unitOfWork;
         _cacheService = cacheService;
+        _leaderboardService = leaderboardService;
     }
 
     public async Task<PlayerResponseDto> Handle(RegisterPlayerCommand request, CancellationToken cancellationToken)
     {
-        //if (await _context.Players.AnyAsync(p => p.Username == request.Username, cancellationToken))
         var existingPlayer = await _playerRepository.GetByUsernameAsync(request.Username);
         if (existingPlayer != null)
             throw new InvalidOperationException($"Username '{request.Username}' is already taken.");
@@ -44,6 +45,8 @@ public class RegisterPlayerCommandHandler : IRequestHandler<RegisterPlayerComman
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         await _cacheService.RemoveAsync("all_players", cancellationToken);
+
+        await _leaderboardService.UpdatePlayerMmrAsync(player.Id, player.Mmr);
 
         return new PlayerResponseDto(
             player.Id, player.Username, player.Mmr, player.TrustFactor, player.Region, player.Role, player.CreatedAt

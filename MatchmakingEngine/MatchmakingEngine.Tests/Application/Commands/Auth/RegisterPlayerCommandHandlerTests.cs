@@ -13,17 +13,20 @@ public class RegisterPlayerCommandHandlerTests
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<ICacheService> _cacheMock;
     private readonly RegisterPlayerCommandHandler _handler;
+    private readonly Mock<ILeaderboardService> _leaderboardService;
 
     public RegisterPlayerCommandHandlerTests()
     {
         _playerRepoMock = new Mock<IPlayerRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _cacheMock = new Mock<ICacheService>();
+        _leaderboardService = new Mock<ILeaderboardService>();
 
         _handler = new RegisterPlayerCommandHandler(
             _playerRepoMock.Object,
             _unitOfWorkMock.Object,
-            _cacheMock.Object);
+            _cacheMock.Object,
+            _leaderboardService.Object);
     }
 
     [Fact]

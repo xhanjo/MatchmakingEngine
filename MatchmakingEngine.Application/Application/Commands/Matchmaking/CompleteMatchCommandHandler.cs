@@ -14,17 +14,20 @@ public class CompleteMatchCommandHandler : IRequestHandler<CompleteMatchCommand,
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<CompleteMatchCommandHandler> _logger;
     private readonly ICacheService _cacheService;
+    private readonly ILeaderboardService _leaderboardService;
 
     public CompleteMatchCommandHandler(
         IMatchRepository matchRepository,
         IUnitOfWork unitOfWork,
         ILogger<CompleteMatchCommandHandler> logger,
-        ICacheService cacheService)
+        ICacheService cacheService,
+        ILeaderboardService leaderboardService)
     {
         _matchRepository = matchRepository;
         _unitOfWork = unitOfWork;
         _logger = logger;
         _cacheService = cacheService;
+        _leaderboardService = leaderboardService;
     }
 
     public async Task<CompleteMatchResult> Handle(CompleteMatchCommand request, CancellationToken cancellationToken)
@@ -44,7 +47,7 @@ public class CompleteMatchCommandHandler : IRequestHandler<CompleteMatchCommand,
 
         int team1Kills = random.Next(5, 31);
         int team2Kills = random.Next(5, 31);
-        if (team1Kills == team2Kills) team1Kills++; // Prevent ties
+        if (team1Kills == team2Kills) team1Kills++; 
 
         int winningTeam = team1Kills > team2Kills ? 1 : 2;
 
@@ -72,27 +75,23 @@ public class CompleteMatchCommandHandler : IRequestHandler<CompleteMatchCommand,
         DistributeStat(team1Players, team1Deaths, (p, v) => p.Deaths = v);
         DistributeStat(team2Players, team2Deaths, (p, v) => p.Deaths = v);
 
-        // 1. Calculate assists and scores
         foreach (var p in match.Players)
         {
             p.Assists = random.Next(0, Math.Max(1, p.Kills / 2 + 1));
             p.Score = (p.Kills * 2) + p.Assists;
         }
 
-        // 2. Pick MVP: choose randomly among players with the highest score (fair tie-breaking)
         var maxScore = match.Players.Max(p => p.Score);
         var topScorers = match.Players.Where(p => p.Score == maxScore).ToList();
         var mvpPlayer = topScorers[random.Next(topScorers.Count)];
         mvpPlayer.IsMvp = true;
 
-        // 3. Apply MMR changes and trust factor recovery, build scoreboard
         var scoreboard = new List<PlayerStatsDto>();
         foreach (var p in match.Players)
         {
             int mmrChange = p.Team == winningTeam ? 25 : -25;
             p.Player.Mmr += mmrChange;
 
-            // Small trust factor recovery for completing a match (+2%)
             p.Player.TrustFactor = Math.Min(1.0, p.Player.TrustFactor + 0.02);
 
             scoreboard.Add(new PlayerStatsDto(
@@ -110,6 +109,11 @@ public class CompleteMatchCommandHandler : IRequestHandler<CompleteMatchCommand,
 
         await _cacheService.RemoveAsync("all_players", cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        foreach (var p in match.Players)
+        {
+            await _leaderboardService.UpdatePlayerMmrAsync(p.PlayerId, p.Player.Mmr);
+        }
 
         _logger.LogInformation("Match {MatchId} completed. Winner: Team {WinningTeam}. MVP: {Mvp}",
             match.Id, winningTeam, mvpPlayer?.Player.Username);

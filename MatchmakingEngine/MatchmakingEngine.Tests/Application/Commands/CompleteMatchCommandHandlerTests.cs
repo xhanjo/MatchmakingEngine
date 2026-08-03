@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MatchmakingEngine.Application.Commands.Matchmaking;
+using MatchmakingEngine.Application.Interfaces;
 using MatchmakingEngine.Application.Interfaces.Repositories;
 using MatchmakingEngine.Domain;
 using MatchmakingEngine.Domain.Exceptions;
@@ -20,6 +21,7 @@ public class CompleteMatchCommandHandlerTests
     private readonly Mock<ILogger<CompleteMatchCommandHandler>> _loggerMock;
     private readonly Mock<global::MatchmakingEngine.Application.Interfaces.ICacheService> _cacheServiceMock;
     private readonly CompleteMatchCommandHandler _handler;
+    private readonly Mock<ILeaderboardService> _leaderboardService;
 
     public CompleteMatchCommandHandlerTests()
     {
@@ -27,12 +29,14 @@ public class CompleteMatchCommandHandlerTests
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _loggerMock = new Mock<ILogger<CompleteMatchCommandHandler>>();
         _cacheServiceMock = new Mock<global::MatchmakingEngine.Application.Interfaces.ICacheService>();
+        _leaderboardService = new Mock<ILeaderboardService>();
 
         _handler = new CompleteMatchCommandHandler(
             _matchRepositoryMock.Object,
             _unitOfWorkMock.Object,
             _loggerMock.Object,
-            _cacheServiceMock.Object);
+            _cacheServiceMock.Object,
+            _leaderboardService.Object);
     }
 
     [Fact]

@@ -66,7 +66,10 @@ public class MatchmakingController : ControllerBase
         {
             foreach (var pid in result.PlayerIds)
             {
-                await _hubContext.Clients.Group(pid.ToString()).SendAsync("MatchStarted", matchId);
+                if (result.MatchStatus == Domain.MatchStatus.MapVeto)
+                    await _hubContext.Clients.Group(pid.ToString()).SendAsync("MatchReadyForVeto", matchId);
+                else
+                    await _hubContext.Clients.Group(pid.ToString()).SendAsync("MatchStarted", matchId);
             }
             await _hubContext.Clients.Group("Admins").SendAsync("AdminMatchesUpdated");
         }
@@ -94,6 +97,26 @@ public class MatchmakingController : ControllerBase
         return Ok();
     }
 
+    [HttpPost("veto/{matchId}/{mapName}")]
+    public async Task<IActionResult> VetoMap(Guid matchId, string mapName)
+    {
+        var playerId = GetPlayerIdFromToken();
+        var result = await _mediator.Send(new BanMapCommand(matchId, playerId, mapName));
+
+        foreach (var pid in result.PlayerIds)
+        {
+            await _hubContext.Clients.Group(pid.ToString()).SendAsync("MapVetoUpdated", result);
+        }
+
+        if (result.Status == Domain.MatchStatus.StartingServer)
+        {
+            foreach (var pid in result.PlayerIds)
+            {
+                await _hubContext.Clients.Group(pid.ToString()).SendAsync("MatchStarting", result.AvailableMaps.First());
+            }
+        }
+        return Ok(result);
+    }
 
     [Authorize(Roles = "Admin")]
     [HttpPost("complete/{matchId}")]

@@ -46,6 +46,7 @@ builder.Services.AddScoped<IMatchRepository, MatchRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IFriendshipRepository, FriendshipRepository>();
 builder.Services.AddScoped<IPartyRepository, PartyRepository>();
+builder.Services.AddSingleton<MatchmakingEngine.Application.Interfaces.ILeaderboardService, MatchmakingEngine.Infrastructure.Services.LeaderboardService>();
 
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? throw new InvalidOperationException("JWT:Issuer is missing in configuration.");
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? throw new InvalidOperationException("JWT:Audience is missing in configuration.");
@@ -116,6 +117,7 @@ if (runWorker)
 {
     builder.Services.AddHostedService<MatchmakingWorker>();
     builder.Services.AddHostedService<MatchCleanupWorker>();
+    builder.Services.AddHostedService<MatchmakingEngine.HostedServices.LeaderboardSeederWorker>();
 }
 
 var dbConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")

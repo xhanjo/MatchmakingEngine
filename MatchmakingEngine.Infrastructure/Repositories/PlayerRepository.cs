@@ -31,6 +31,13 @@ public class PlayerRepository : IPlayerRepository
         var query = trackChanges ? _context.Players : _context.Players.AsNoTracking();
         return await query.FirstOrDefaultAsync(p => p.Username == username, cancellationToken);
     }
+
+    public async Task<IEnumerable<Player>> GetByIdsAsync(IEnumerable<Guid> ids, bool trackChanges = false, CancellationToken cancellationToken = default)
+    {
+        var query = trackChanges ? _context.Players : _context.Players.AsNoTracking();
+        return await query.Where(p => ids.Contains(p.Id)).ToListAsync(cancellationToken);
+    }
+
     public async Task AddAsync(Player player, CancellationToken cancellationToken = default)
     {
         await _context.Players.AddAsync(player, cancellationToken);

@@ -28,7 +28,8 @@ public class JoinPartyCommandHandler : IRequestHandler<JoinPartyCommand, PartyDt
     public async Task<PartyDto> Handle(JoinPartyCommand request, CancellationToken cancellationToken)
     {
         var cacheKey = $"party_invite:{request.PlayerId}:{request.PartyId}";
-        var invite = await _cacheService.GetOrCreateAsync(cacheKey, () => Task.FromResult<PartyInviteCache?>(null));
+        var invite = await _cacheService.GetOrCreateAsync(cacheKey, () => Task.FromResult<PartyInviteCache>(null!));
+
         if (invite == null)
             throw new ConflictException("You don't have a valid invite to this party.");
 

@@ -38,7 +38,7 @@ public class MatchmakingDbContext : DbContext
             .HasConversion<string>();
 
         modelBuilder.Entity<Match>()
-            .Property<uint>("Version")
+            .Property(m => m.Version)
             .IsRowVersion();
 
         // ===== MatchPlayer =====

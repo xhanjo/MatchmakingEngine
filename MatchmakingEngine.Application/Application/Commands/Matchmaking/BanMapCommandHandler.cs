@@ -63,7 +63,8 @@ public class BanMapCommandHandler : IRequestHandler<BanMapCommand, BanMapResult>
             }
         }
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new BanMapResult(
             match.Players.Select(p => p.PlayerId).ToList(),

@@ -2,6 +2,8 @@
 using MatchmakingEngine.Application.Interfaces.Repositories;
 using MatchmakingEngine.Data;
 using MatchmakingEngine.Domain.Common;
+using Microsoft.EntityFrameworkCore;
+using MatchmakingEngine.Domain.Exceptions;
 
 namespace MatchmakingEngine.Infrastructure.Repositories;
 

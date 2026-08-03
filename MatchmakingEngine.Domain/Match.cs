@@ -1,4 +1,6 @@
-﻿namespace MatchmakingEngine.Domain;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace MatchmakingEngine.Domain;
 
 public record Match(
     Guid Id,
@@ -13,4 +15,6 @@ public record Match(
     public List<string> BannedMaps { get; set; } = new();
     public Guid? CurrentVetoTurnPlayerId { get; set; }
     public DateTimeOffset? VetoDeadLine { get; set; }
+    [Timestamp]
+    public uint Version { get; set; }
 }

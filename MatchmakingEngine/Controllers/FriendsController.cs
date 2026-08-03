@@ -42,7 +42,7 @@ public class FriendsController : ControllerBase
     {
         var otherPlayerId = await _mediator.Send(new AcceptFriendRequestCommand(requestId, GetPlayerId()));
         if (otherPlayerId != null)
-            await _hubContext.Clients.Group(otherPlayerId.ToString()).SendAsync("FriendsUpdated");
+            await _hubContext.Clients.Group(otherPlayerId.ToString()!).SendAsync("FriendsUpdated");
         return Ok(new { success = otherPlayerId != null });
     }
 
@@ -51,7 +51,7 @@ public class FriendsController : ControllerBase
     {
         var otherPlayerId = await _mediator.Send(new DeclineFriendRequestCommand(requestId, GetPlayerId()));
         if (otherPlayerId != null)
-            await _hubContext.Clients.Group(otherPlayerId.ToString()).SendAsync("FriendsUpdated");
+            await _hubContext.Clients.Group(otherPlayerId.ToString()!).SendAsync("FriendsUpdated");
         return Ok(new { success = otherPlayerId != null });
     }
 
@@ -60,7 +60,7 @@ public class FriendsController : ControllerBase
     {
         var otherPlayerId = await _mediator.Send(new RemoveFriendCommand(friendshipId, GetPlayerId()));
         if (otherPlayerId != null)
-            await _hubContext.Clients.Group(otherPlayerId.ToString()).SendAsync("FriendsUpdated");
+            await _hubContext.Clients.Group(otherPlayerId.ToString()!).SendAsync("FriendsUpdated");
         return Ok(new { success = otherPlayerId != null });
     }
 

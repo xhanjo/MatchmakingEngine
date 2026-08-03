@@ -118,6 +118,7 @@ if (runWorker)
     builder.Services.AddHostedService<MatchmakingWorker>();
     builder.Services.AddHostedService<MatchCleanupWorker>();
     builder.Services.AddHostedService<MatchmakingEngine.HostedServices.LeaderboardSeederWorker>();
+    builder.Services.AddHostedService<MatchmakingEngine.HostedServices.MapVetoWorker>();
 }
 
 var dbConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")

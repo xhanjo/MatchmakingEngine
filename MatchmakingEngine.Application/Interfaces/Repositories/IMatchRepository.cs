@@ -8,6 +8,7 @@ public interface IMatchRepository
     Task<Match?> GetActiveMatchByPlayerIdAsync(Guid playerId, bool trackChanges = false, CancellationToken cancellationToken = default);
     Task<IEnumerable<Match>> GetMatchHistoryByPlayerIdAsync(Guid playerId, bool trackChanges = false, CancellationToken cancellationToken = default);
     Task<IEnumerable<Match>> GetAllMatchesAsync(bool trackChanges = false, CancellationToken cancellationToken = default);
+    Task<IEnumerable<Match>> GetMatchesInVetoTimeoutAsync(DateTimeOffset currentTime, CancellationToken cancellationToken = default);
     Task AddAsync(Match match, CancellationToken cancellationToken = default);
     void Update(Match match);
 }

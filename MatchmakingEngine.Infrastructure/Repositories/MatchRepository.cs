@@ -54,6 +54,14 @@ public class MatchRepository : IMatchRepository
             .OrderByDescending(m => m.CreatedAt)
             .ToListAsync(cancellationToken);
     }
+    
+    public async Task<IEnumerable<Match>> GetMatchesInVetoTimeoutAsync(DateTimeOffset currentTime, CancellationToken cancellationToken = default)
+    {
+        return await _context.Matches
+            .Include(m => m.Players)
+            .Where(m => m.Status == MatchStatus.MapVeto && m.VetoDeadLine < currentTime)
+            .ToListAsync(cancellationToken);
+    }
 
     public async Task AddAsync(Match match, CancellationToken cancellationToken = default)
     {

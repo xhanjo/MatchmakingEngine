@@ -42,14 +42,21 @@ public class AcceptMatchCommandHandler : IRequestHandler<AcceptMatchCommand, Acc
         playerInMatch.Accepted = true;
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        // Fetch fresh state WITHOUT tracking to bypass EF Core's local cache
         var freshMatch = await _matchRepository.GetByIdWithPlayersAsync(request.MatchId, trackChanges: false, cancellationToken);
         bool allAccepted = freshMatch?.Players.All(p => p.Accepted) ?? false;
 
         if (allAccepted && match.Status == MatchStatus.Pending)
         {
-            match.Status = MatchStatus.Accepted;
-            _logger.LogInformation("[GAME START] All players accepted! Match {MatchId} is starting!", match.Id);
+            match.Status = MatchStatus.MapVeto;
+
+            match.AvailableMaps = new List<string> { "Mireage", "Inferno", "Dust2", "Overpass", "Nuke", "Vertigo", "Ancient" };
+            match.BannedMaps = new List<string>();
+
+            match.CurrentVetoTurnPlayerId = match.Players.First().PlayerId;
+
+            match.VetoDeadLine = DateTimeOffset.UtcNow.AddSeconds(30);
+
+            _logger.LogInformation("[GAME START] All players accepted! Match {MatchId}  entering Map Veto phase. First turn: {PlayerId}", match.Id, match.CurrentVetoTurnPlayerId);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
 

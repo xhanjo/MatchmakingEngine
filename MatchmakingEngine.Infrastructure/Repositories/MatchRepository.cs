@@ -29,6 +29,8 @@ public class MatchRepository : IMatchRepository
         var query = trackChanges ? _context.Matches : _context.Matches.AsNoTracking();
 
         return await query
+            .Include(m => m.Players)
+                .ThenInclude(p => p.Player)
             .FirstOrDefaultAsync(m =>
                 m.Players.Any(mp => mp.PlayerId == playerId) &&
                 (m.Status == MatchStatus.Pending || m.Status == MatchStatus.Accepted

@@ -1,6 +1,8 @@
 ﻿using MatchmakingEngine.Application.Application.Commands.Matchmaking;
 using MatchmakingEngine.Application.Interfaces.Repositories;
+using MatchmakingEngine.Hubs;
 using MediatR;
+using Microsoft.AspNetCore.SignalR;
 
 namespace MatchmakingEngine.HostedServices;
 
@@ -38,7 +40,13 @@ public class MapVetoWorker : BackgroundService
                         _logger.LogWarning("[VetoWorker] Player {PlayerId} AFK! Auto-banning map {MapName} for Match {MatchId}",
                             match.CurrentVetoTurnPlayerId, randomMap, match.Id);
 
-                        await meditor.Send(new BanMapCommand(match.Id, match.CurrentVetoTurnPlayerId.Value, randomMap), cancellationToken);
+                        var result = await meditor.Send(new BanMapCommand(match.Id, match.CurrentVetoTurnPlayerId.Value, randomMap), cancellationToken);
+                        
+                        var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<MatchmakingHub>>();
+                        foreach (var pid in result.PlayerIds)
+                        {
+                            await hubContext.Clients.Group(pid.ToString()).SendAsync("MapVetoUpdated", result.VetoState);
+                        }    
                     }
                 }
             }

@@ -91,7 +91,24 @@ const App = {
                 this.state.currentMatchId = status.lobbyId;
             }
 
-            if (this.state.status === 'Idle' && window.location.hash === '#match-room') {
+            if (this.state.status === 'MapVeto' && status.vetoState) {
+                this.state.status = 'Veto';
+                this.state.vetoState = status.vetoState;
+                
+                const currentHash = window.location.hash;
+                if (currentHash !== '#match-room') {
+                    window.location.hash = '#match-room';
+                }
+
+                const team1 = status.vetoState.team1[0]?.username || 'Team 1';
+                const team2 = status.vetoState.team2[0]?.username || 'Team 2';
+                const t1 = document.querySelector('#veto-team1 .team-name');
+                const t2 = document.querySelector('#veto-team2 .team-name');
+                if (t1) t1.innerText = team1;
+                if (t2) t2.innerText = team2;
+                
+                this.renderMapVetoUI();
+            } else if (this.state.status === 'Idle' && window.location.hash === '#match-room') {
                 window.location.hash = '#lobby';
             }
 

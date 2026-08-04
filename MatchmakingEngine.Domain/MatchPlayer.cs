@@ -14,4 +14,5 @@ public class MatchPlayer
     public bool IsMvp { get; set; } = false;
     public Match Match { get; set; } = null!;
     public Player Player { get; set; } = null!;
+    public bool IsCaptain { get; set; } = false;
 }

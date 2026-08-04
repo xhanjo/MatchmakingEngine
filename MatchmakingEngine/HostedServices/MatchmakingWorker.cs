@@ -120,13 +120,14 @@ public class MatchmakingWorker : BackgroundService
                 {
                     foreach (var member in party.Members)
                     {
-                        match.Players.Add(new MatchPlayer { Id = Guid.NewGuid(), MatchId = match.Id, PlayerId = member.PlayerId, Team = teamIndex });
+                        bool isCap = member.PlayerId == party.LeaderId;
+                        match.Players.Add(new MatchPlayer { Id = Guid.NewGuid(), MatchId = match.Id, PlayerId = member.PlayerId, Team = teamIndex, IsCaptain = isCap });
                     }
                 }
             }
             else
             {
-                match.Players.Add(new MatchPlayer { Id = Guid.NewGuid(), MatchId = match.Id, PlayerId = ticket.PlayerId, Team = teamIndex });
+                match.Players.Add(new MatchPlayer { Id = Guid.NewGuid(), MatchId = match.Id, PlayerId = ticket.PlayerId, Team = teamIndex, IsCaptain = true });
             }
         }
 

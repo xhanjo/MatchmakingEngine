@@ -52,7 +52,7 @@ public class AcceptMatchCommandHandler : IRequestHandler<AcceptMatchCommand, Acc
             match.AvailableMaps = new List<string> { "Mirage", "Inferno", "Dust2", "Overpass", "Nuke", "Vertigo", "Ancient" };
             match.BannedMaps = new List<string>();
 
-            match.CurrentVetoTurnPlayerId = match.Players.First().PlayerId;
+            match.CurrentVetoTurnPlayerId = match.Players.FirstOrDefault(p => p.Team == 1 && p.IsCaptain)?.PlayerId ?? match.Players.First().PlayerId;
 
             match.VetoDeadLine = DateTimeOffset.UtcNow.AddSeconds(30);
 

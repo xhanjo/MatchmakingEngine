@@ -58,12 +58,11 @@ public class BanMapCommandHandler : IRequestHandler<BanMapCommand, BanMapResult>
         }
         else
         {
-            var otherPlayer = match.Players.FirstOrDefault(p => p.PlayerId != request.PlayerId);
-            if (otherPlayer != null)
-            {
-                match.CurrentVetoTurnPlayerId = otherPlayer.PlayerId;
+            var team1Captain = match.Players.FirstOrDefault(p => p.Team == 1 && p.IsCaptain)?.PlayerId;
+            var team2Captain = match.Players.FirstOrDefault(p => p.Team == 2 && p.IsCaptain)?.PlayerId;
+
+            match.CurrentVetoTurnPlayerId = (request.PlayerId == team1Captain) ? team2Captain : team1Captain;
                 match.VetoDeadLine = DateTimeOffset.UtcNow.AddSeconds(30);
-            }
         }
 
 

@@ -625,7 +625,7 @@ const App = {
             console.log('History data:', history, 'UserId:', userId);
             const finishedMatches = (history || []).filter(m =>
                 m.status === 'Finished' || m.status === 6
-            );
+            ).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
             console.log('Finished matches:', finishedMatches);
 
             if (finishedMatches.length === 0) {

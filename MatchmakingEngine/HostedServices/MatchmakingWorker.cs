@@ -146,7 +146,7 @@ public class MatchmakingWorker : BackgroundService
             await _hubContext.Clients.Group(player.PlayerId.ToString()).SendAsync("MatchFound", match.Id, cancellationToken);
         }
 
-        await _hubContext.Clients.Group("Admins").SendAsync("AdminMatchesUpdated", cancellationToken);
+        await _hubContext.Clients.Group("Admins").SendAsync("AdminMatchesUpdated", cancellationToken: cancellationToken);
 
         _logger.LogInformation("Match {MatchId} created (Mode: {Mode})", match.Id, match.GameMode);
     }

@@ -67,7 +67,7 @@ public class MatchmakingController : ControllerBase
             foreach (var pid in result.PlayerIds)
             {
                 if (result.MatchStatus == Domain.MatchStatus.MapVeto)
-                    await _hubContext.Clients.Group(pid.ToString()).SendAsync("MatchReadyForVeto", matchId);
+                    await _hubContext.Clients.Group(pid.ToString()).SendAsync("MatchReadyForVeto", result.VetoState);
                 else
                     await _hubContext.Clients.Group(pid.ToString()).SendAsync("MatchStarted", matchId);
             }
@@ -105,14 +105,15 @@ public class MatchmakingController : ControllerBase
 
         foreach (var pid in result.PlayerIds)
         {
-            await _hubContext.Clients.Group(pid.ToString()).SendAsync("MapVetoUpdated", result);
+            await _hubContext.Clients.Group(pid.ToString()).SendAsync("MapVetoUpdated", result.VetoState);
         }
 
-        if (result.Status == Domain.MatchStatus.StartingServer)
+        if (result.VetoState.Status == "Completed")
         {
+            var chosenMap = result.VetoState.Maps.FirstOrDefault(m => !m.IsBanned)?.Name;
             foreach (var pid in result.PlayerIds)
             {
-                await _hubContext.Clients.Group(pid.ToString()).SendAsync("MatchStarting", result.AvailableMaps.First());
+                await _hubContext.Clients.Group(pid.ToString()).SendAsync("MatchStarting", chosenMap);
             }
         }
         return Ok(result);

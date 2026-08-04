@@ -42,12 +42,11 @@ public class MapVetoWorker : BackgroundService
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
+                _logger.LogError(ex, "Error in VetoWorker");
             }
+            await Task.Delay(5000, cancellationToken);
         }
-
-        await Task.Delay(5000, cancellationToken);
     }
 }

@@ -49,7 +49,7 @@ public class AcceptMatchCommandHandler : IRequestHandler<AcceptMatchCommand, Acc
         {
             match.Status = MatchStatus.MapVeto;
 
-            match.AvailableMaps = new List<string> { "Mireage", "Inferno", "Dust2", "Overpass", "Nuke", "Vertigo", "Ancient" };
+            match.AvailableMaps = new List<string> { "Mirage", "Inferno", "Dust2", "Overpass", "Nuke", "Vertigo", "Ancient" };
             match.BannedMaps = new List<string>();
 
             match.CurrentVetoTurnPlayerId = match.Players.First().PlayerId;
@@ -66,7 +66,8 @@ public class AcceptMatchCommandHandler : IRequestHandler<AcceptMatchCommand, Acc
             statusMessage,
             allAccepted,
             match.Status,
-            freshMatch?.Players.Select(p => p.PlayerId).ToList() ?? new List<Guid>()
+            freshMatch?.Players.Select(p => p.PlayerId).ToList() ?? new List<Guid>(),
+            match.Status == MatchStatus.MapVeto ? MatchmakingEngine.Application.DTO.VetoStateDto.FromMatch(match) : null
         );
     }
 }

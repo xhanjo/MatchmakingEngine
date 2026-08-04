@@ -6,5 +6,6 @@ public record AcceptMatchResult(
     string StatusMessage,
     bool AllAccepted,
     MatchStatus MatchStatus,
-    List<Guid> PlayerIds
+    List<Guid> PlayerIds,
+    MatchmakingEngine.Application.DTO.VetoStateDto? VetoState = null
     );

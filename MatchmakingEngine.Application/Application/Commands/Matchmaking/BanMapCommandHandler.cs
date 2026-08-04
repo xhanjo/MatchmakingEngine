@@ -38,6 +38,9 @@ public class BanMapCommandHandler : IRequestHandler<BanMapCommand, BanMapResult>
         if (!match.AvailableMaps.Contains(request.MapName))
             throw new ConflictException($"Map {request.MapName} is not available or already banned");
 
+        if (match.AvailableMaps.Count == 1)
+            throw new ConflictException("Cannot ban the last remaining map. This is the chosen map!");
+
         match.AvailableMaps.Remove(request.MapName);
         match.BannedMaps.Add(request.MapName);
 
@@ -68,10 +71,7 @@ public class BanMapCommandHandler : IRequestHandler<BanMapCommand, BanMapResult>
 
         return new BanMapResult(
             match.Players.Select(p => p.PlayerId).ToList(),
-            request.MapName,
-            match.AvailableMaps,
-            match.CurrentVetoTurnPlayerId,
-            match.Status
+            VetoStateDto.FromMatch(match)
         );
     }
 }

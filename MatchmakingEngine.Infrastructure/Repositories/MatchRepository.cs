@@ -31,7 +31,8 @@ public class MatchRepository : IMatchRepository
         return await query
             .FirstOrDefaultAsync(m =>
                 m.Players.Any(mp => mp.PlayerId == playerId) &&
-                (m.Status == MatchStatus.Pending || m.Status == MatchStatus.Accepted), cancellationToken);
+                (m.Status == MatchStatus.Pending || m.Status == MatchStatus.Accepted
+                || m.Status == MatchStatus.MapVeto || m.Status == MatchStatus.StartingServer), cancellationToken);
     }
 
     public async Task<IEnumerable<Match>> GetMatchHistoryByPlayerIdAsync(Guid playerId, bool trackChanges = false, CancellationToken cancellationToken = default)

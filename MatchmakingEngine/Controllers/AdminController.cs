@@ -39,7 +39,10 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> GetActiveMatches()
     {
         var matches = await _matchRepository.GetAllMatchesAsync();
-        var active = matches.Where(m => m.Status == MatchStatus.Pending || m.Status == MatchStatus.Accepted);
+        var active = matches.Where(m => m.Status == MatchStatus.Pending ||
+                                   m.Status == MatchStatus.Accepted ||
+                                   m.Status == MatchStatus.MapVeto ||
+                                   m.Status == MatchStatus.StartingServer);
         var result = active.Select(m => new
         {
             Id = m.Id,

@@ -23,7 +23,7 @@ public class GetMyPartyQueryHandler : IRequestHandler<GetMyPartyQuery, PartyDto>
         var party = await _partyRepository.GetPartyByPlayerIdAsync(request.PlayerId, trackChanges: false, cancellationToken);
 
         if (party == null)
-            throw new NotFoundException("You are not in a party");
+            return null!;
 
         var memberDtos = party.Members
             .Select(m => new PartyMembersDto(m.PlayerId, m.Player.Username, m.Player.Mmr))

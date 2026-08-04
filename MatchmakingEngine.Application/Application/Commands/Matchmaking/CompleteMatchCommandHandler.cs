@@ -38,8 +38,12 @@ public class CompleteMatchCommandHandler : IRequestHandler<CompleteMatchCommand,
         if (match == null)
             throw new NotFoundException($"Match with ID {request.MatchId} was not found.");
 
-        if (match.Status != MatchStatus.Accepted)
+        if (match.Status != MatchStatus.Accepted &&
+            match.Status != MatchStatus.MapVeto &&
+            match.Status != MatchStatus.StartingServer)
+        {
             throw new ConflictException("Match has not started yet or is already finished.");
+        }
 
         match.Status = MatchStatus.Finished;
 

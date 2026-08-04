@@ -28,6 +28,13 @@ const SignalRManager = {
                 window.App.onMatchStarted(matchId);
             }
         });
+        
+        this.connection.on("MatchStarting", (matchId) => {
+            console.log("MatchStarting event received", matchId);
+            if (window.App && typeof window.App.onMatchStarting === 'function') {
+                window.App.onMatchStarting(matchId);
+            }
+        });
 
         this.connection.on('MatchCanceled', () => {
             console.log('Match Canceled');
@@ -61,6 +68,27 @@ const SignalRManager = {
             console.log('Match finished!', result);
             if (window.App && typeof window.App.onMatchFinished === 'function') {
                 window.App.onMatchFinished(result);
+            }
+        });
+
+        this.connection.on('MatchReadyForVeto', (vetoState) => {
+            console.log('MatchReadyForVeto received', vetoState);
+            if (window.App && typeof window.App.onMatchReadyForVeto === 'function') {
+                window.App.onMatchReadyForVeto(vetoState);
+            }
+        });
+
+        this.connection.on('MapVetoUpdated', (vetoState) => {
+            console.log('MapVetoUpdated received', vetoState);
+            if (window.App && typeof window.App.onMapVetoUpdated === 'function') {
+                window.App.onMapVetoUpdated(vetoState);
+            }
+        });
+
+        this.connection.on('AdminMatchesUpdated', () => {
+            console.log('AdminMatchesUpdated received');
+            if (window.App && typeof window.App.loadAdminData === 'function' && window.location.hash === '#admin') {
+                window.App.loadAdminData();
             }
         });
         

@@ -60,6 +60,7 @@ const Api = {
     getFriends: () => Api.request('/Friends'),
     getPendingFriends: () => Api.request('/Friends/pending'),
     getMyHistory: () => Api.request('/Players/my/history'),
+    getLeaderboard: () => Api.request('/Leaderboard'),
 
     // Matchmaking
     joinMatchmaking: () => Api.request('/Matchmaking/join', { method: 'POST' }),
@@ -67,6 +68,7 @@ const Api = {
     getMatchmakingStatus: () => Api.request('/Matchmaking/status'),
     acceptMatch: (matchId) => Api.request(`/Matchmaking/accept/${matchId}`, { method: 'POST' }),
     declineMatch: (matchId) => Api.request(`/Matchmaking/decline/${matchId}`, { method: 'POST' }),
+    vetoMap: (matchId, mapName) => Api.request(`/Matchmaking/veto/${matchId}/${mapName}`, { method: 'POST' }),
 
     // Party
     createParty: () => Api.request('/Party/create', { method: 'POST', body: JSON.stringify(2) }), // ALWAYS DUO (2)

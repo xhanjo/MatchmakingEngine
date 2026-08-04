@@ -49,6 +49,13 @@
                 <span class="font-display font-bold text-base tracking-widest text-white">MATCHENGINE</span>
             </div>
 
+            <!-- Navigation Links -->
+            <nav class="flex items-center gap-4 ml-6" id="nav-links">
+                <a href="#lobby" class="nav-link text-sm font-display font-semibold tracking-wider uppercase text-white border-b-2 border-brand px-2 py-4">Lobby</a>
+                <a href="#leaderboard" class="nav-link text-sm font-display font-semibold tracking-wider uppercase text-slate-500 hover:text-slate-300 border-b-2 border-transparent px-2 py-4 transition-colors">Leaderboard</a>
+                <!-- Admin link will be injected here if user is admin -->
+            </nav>
+
             <div class="flex-1"></div>
 
             <!-- Right side: username + actions -->
@@ -71,72 +78,224 @@
     </header>
 
     <!-- ══════════════════════════════════════════
-         MAIN LAYOUT
+         MAIN LAYOUT (SPA VIEWS)
          ══════════════════════════════════════════ -->
-    <div class="flex flex-1 overflow-hidden">
+    <div id="views-container" class="flex flex-1 overflow-hidden relative">
 
-        <!-- ── Left: Matchmaking Area ── -->
-        <main class="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
+        <!-- ── VIEW: LOBBY ── -->
+        <section id="view-lobby" class="w-full h-full flex overflow-hidden">
+            <!-- Left: Matchmaking Area -->
+            <main class="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
 
-            <!-- Matchmaking Card -->
-            <div class="bg-app-surface border border-app-border rounded-2xl p-10 flex flex-col items-center gap-5">
+                <!-- Matchmaking Card -->
+                <div class="bg-app-surface border border-app-border rounded-2xl p-10 flex flex-col items-center gap-5">
 
-                <button id="find-match-btn" class="find-match-base find-match-idle">
-                    FIND MATCH
-                </button>
+                    <button id="find-match-btn" class="find-match-base find-match-idle">
+                        FIND MATCH
+                    </button>
 
-                <div id="match-status-text" class="text-sm text-slate-500 min-h-5 text-center tracking-wide"></div>
+                    <div id="match-status-text" class="text-sm text-slate-500 min-h-5 text-center tracking-wide"></div>
 
-                <!-- ── Party / Lobby Section ── -->
-                <div id="party-wrapper" class="w-full max-w-sm pt-4 mt-2 border-t border-app-border">
-                    <div class="flex items-center justify-between mb-4">
-                        <span class="font-display font-bold text-xs uppercase tracking-widest text-slate-500">Lobby</span>
-                        <button id="create-party-btn"
-                            class="text-xs px-3 py-1.5 rounded-lg font-display font-semibold uppercase tracking-wider transition-all"
-                            style="background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.2); color: #818cf8;">
-                            + Create Duo Lobby
-                        </button>
+                    <!-- Party / Lobby Section -->
+                    <div id="party-wrapper" class="w-full max-w-sm pt-4 mt-2 border-t border-app-border">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="font-display font-bold text-xs uppercase tracking-widest text-slate-500">Lobby</span>
+                            <button id="create-party-btn"
+                                class="text-xs px-3 py-1.5 rounded-lg font-display font-semibold uppercase tracking-wider transition-all"
+                                style="background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.2); color: #818cf8;">
+                                + Create Duo Lobby
+                            </button>
+                        </div>
+
+                        <!-- Party container (shown when in a party) -->
+                        <div id="party-container" style="display:none;">
+                            <div id="party-members-list" class="flex flex-col gap-2 mb-3"></div>
+                            <button id="leave-party-btn"
+                                class="w-full py-2 rounded-lg text-xs font-display font-bold uppercase tracking-wider transition-all"
+                                style="background: rgba(239,68,68,0.07); border: 1px solid rgba(239,68,68,0.2); color: #f87171; display:none;">
+                                Leave Party
+                            </button>
+                        </div>
                     </div>
+                </div>
 
-                    <!-- Party container (shown when in a party) -->
-                    <div id="party-container" style="display:none;">
-                        <div id="party-members-list" class="flex flex-col gap-2 mb-3"></div>
-                        <button id="leave-party-btn"
-                            class="w-full py-2 rounded-lg text-xs font-display font-bold uppercase tracking-wider transition-all"
-                            style="background: rgba(239,68,68,0.07); border: 1px solid rgba(239,68,68,0.2); color: #f87171; display:none;">
-                            Leave Party
-                        </button>
+            </main>
+
+            <!-- Right: Friends & Search Sidebar -->
+            <aside class="w-72 shrink-0 bg-app-surface border-l border-app-border flex flex-col overflow-hidden">
+
+                <!-- Player Search -->
+                <div class="p-4 border-b border-app-border">
+                    <p class="font-display font-bold text-xs uppercase tracking-widest text-slate-500 mb-3">Find Players</p>
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 text-xs pointer-events-none">🔍</span>
+                        <input
+                            id="player-search"
+                            type="text"
+                            placeholder="Search by name…"
+                            class="auth-input text-sm !py-2 !pl-8 !rounded-lg">
+                    </div>
+                    <div id="search-results" class="mt-2"></div>
+                </div>
+
+                <!-- Friends List -->
+                <div class="flex-1 overflow-y-auto p-4">
+                    <p class="font-display font-bold text-xs uppercase tracking-widest text-slate-500 mb-3">Friends</p>
+                    <div id="pending-requests" class="mb-2"></div>
+                    <div id="friends-list"></div>
+                </div>
+
+            </aside>
+        </section>
+
+        <!-- ── VIEW: LEADERBOARD ── -->
+        <section id="view-leaderboard" class="w-full h-full overflow-y-auto p-6 hidden">
+            <div class="max-w-4xl mx-auto flex flex-col gap-6">
+                <div class="flex items-center gap-3">
+                    <div class="text-3xl">🏆</div>
+                    <h2 class="font-display font-black text-2xl text-white uppercase tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-brand-light to-brand">Top 100 Players</h2>
+                </div>
+                <div class="bg-app-surface border border-app-border rounded-2xl overflow-hidden shadow-2xl">
+                    <table class="admin-table w-full">
+                        <thead>
+                            <tr>
+                                <th style="text-align:center; width:60px;">Rank</th>
+                                <th>Player</th>
+                                <th>Region</th>
+                                <th style="text-align:right; width:130px;">MMR</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboard-tbody">
+                            <tr><td colspan="4" class="text-center text-slate-600 py-8">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── VIEW: ADMIN ── -->
+        <section id="view-admin" class="w-full h-full overflow-y-auto p-6 hidden">
+            <div class="max-w-6xl mx-auto flex flex-col gap-8">
+                <!-- Active Matches -->
+                <div>
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-2 h-2 rounded-full bg-safe animate-pulse"></div>
+                        <h2 class="font-display font-bold text-lg text-white uppercase tracking-wider">Active Matches</h2>
+                    </div>
+                    <div class="bg-app-surface border border-app-border rounded-2xl overflow-hidden shadow-xl">
+                        <table class="admin-table w-full">
+                            <thead>
+                                <tr>
+                                    <th>Match ID</th>
+                                    <th>Status</th>
+                                    <th>Avg MMR</th>
+                                    <th>Mode</th>
+                                    <th>Created</th>
+                                    <th>Players</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="active-matches-tbody">
+                                <tr><td colspan="7" class="text-center text-slate-600 py-8">Loading…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- All Matches -->
+                <div>
+                    <div class="flex items-center gap-3 mb-4">
+                        <h2 class="font-display font-bold text-lg text-white uppercase tracking-wider">All Matches</h2>
+                        <span id="all-matches-count" class="text-xs text-slate-500 font-display"></span>
+                    </div>
+                    <div class="bg-app-surface border border-app-border rounded-2xl overflow-hidden shadow-xl">
+                        <table class="admin-table w-full">
+                            <thead>
+                                <tr>
+                                    <th>Match ID</th>
+                                    <th>Status</th>
+                                    <th>Avg MMR</th>
+                                    <th>Mode</th>
+                                    <th>Created</th>
+                                    <th>Players</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="all-matches-tbody">
+                                <tr><td colspan="7" class="text-center text-slate-600 py-8">Loading…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Registered Players -->
+                <div>
+                    <div class="flex items-center gap-3 mb-4">
+                        <h2 class="font-display font-bold text-lg text-white uppercase tracking-wider">Registered Players</h2>
+                    </div>
+                    <div class="bg-app-surface border border-app-border rounded-2xl overflow-hidden shadow-xl">
+                        <table class="admin-table w-full">
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Role</th>
+                                    <th>Region</th>
+                                    <th>MMR</th>
+                                    <th>Trust Factor</th>
+                                </tr>
+                            </thead>
+                            <tbody id="players-tbody">
+                                <tr><td colspan="5" class="text-center text-slate-600 py-8">Loading…</td></tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
+        </section>
 
-        </main>
-
-        <!-- ── Right: Friends & Search Sidebar ── -->
-        <aside class="w-72 shrink-0 bg-app-surface border-l border-app-border flex flex-col overflow-hidden">
-
-            <!-- Player Search -->
-            <div class="p-4 border-b border-app-border">
-                <p class="font-display font-bold text-xs uppercase tracking-widest text-slate-500 mb-3">Find Players</p>
-                <div class="relative">
-                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 text-xs pointer-events-none">🔍</span>
-                    <input
-                        id="player-search"
-                        type="text"
-                        placeholder="Search by name…"
-                        class="auth-input text-sm !py-2 !pl-8 !rounded-lg">
+        <!-- ── VIEW: MATCH ROOM (MAP VETO) ── -->
+        <section id="view-match-room" class="w-full h-full flex flex-col bg-app-bg hidden overflow-y-auto">
+            <div class="p-8 flex flex-col items-center gap-6 max-w-6xl mx-auto w-full">
+                
+                <div class="text-center mb-4">
+                    <h1 class="font-display font-black text-4xl uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-brand to-hi mb-2" style="text-shadow: 0 4px 20px rgba(99,102,241,0.4);">Map Veto Phase</h1>
+                    <p id="veto-status-text" class="text-lg text-slate-400 font-medium h-8">Waiting for players...</p>
                 </div>
-                <div id="search-results" class="mt-2"></div>
-            </div>
+                
+                <!-- Turn indicator & Timer -->
+                <div class="flex items-center justify-center gap-12 w-full max-w-3xl mb-8 bg-app-surface border border-app-border rounded-2xl p-6 shadow-2xl relative overflow-hidden">
+                    <div class="absolute inset-0 bg-brand/5 blur-xl"></div>
+                    <div class="relative z-10 flex flex-col items-center flex-1 text-center" id="veto-team1">
+                        <span class="text-sm uppercase tracking-wider text-slate-500 font-bold mb-1">Team 1</span>
+                        <span class="text-xl font-black text-white team-name">...</span>
+                    </div>
+                    
+                    <div class="relative z-10 flex flex-col items-center shrink-0">
+                        <div class="w-16 h-16 rounded-full border-4 border-brand flex items-center justify-center bg-app-elevated shadow-[0_0_15px_rgba(99,102,241,0.5)]">
+                            <span id="veto-timer" class="font-display font-black text-2xl text-white">30</span>
+                        </div>
+                    </div>
+                    
+                    <div class="relative z-10 flex flex-col items-center flex-1 text-center" id="veto-team2">
+                        <span class="text-sm uppercase tracking-wider text-slate-500 font-bold mb-1">Team 2</span>
+                        <span class="text-xl font-black text-white team-name">...</span>
+                    </div>
+                </div>
 
-            <!-- Friends List -->
-            <div class="flex-1 overflow-y-auto p-4">
-                <p class="font-display font-bold text-xs uppercase tracking-widest text-slate-500 mb-3">Friends</p>
-                <div id="pending-requests" class="mb-2"></div>
-                <div id="friends-list"></div>
+                <!-- Maps Grid -->
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 w-full" id="veto-maps-grid">
+                    <!-- Map cards will be dynamically injected here -->
+                </div>
+                
+                <!-- Chat / Logs -->
+                <div class="w-full max-w-3xl mt-8 bg-app-surface border border-app-border rounded-xl p-4 h-48 flex flex-col">
+                    <p class="font-display font-bold text-xs uppercase tracking-widest text-slate-500 mb-2">Veto Log</p>
+                    <div id="veto-log" class="flex-1 overflow-y-auto flex flex-col gap-1 text-sm font-medium"></div>
+                </div>
+                
             </div>
+        </section>
 
-        </aside>
     </div>
 
     <!-- ══════════════════════════════════════════

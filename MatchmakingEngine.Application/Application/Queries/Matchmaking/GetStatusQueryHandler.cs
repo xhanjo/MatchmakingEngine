@@ -33,7 +33,7 @@ public class GetStatusQueryHandler : IRequestHandler<GetStatusQuery, PollingStat
             {
                 statusStr = PollingStatus.MatchFound.ToString();
             }
-            else if (match.Status == MatchStatus.MapVeto)
+            else if (match.Status == MatchStatus.MapVeto || match.Status == MatchStatus.StartingServer)
             {
                 statusStr = "MapVeto";
                 vetoState = MatchmakingEngine.Application.DTO.VetoStateDto.FromMatch(match);

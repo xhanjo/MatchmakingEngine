@@ -48,6 +48,7 @@ const App = {
 
         await this.loadInitialData();
         setInterval(() => this.loadFriends(), 10000);
+        setInterval(() => this.updateMatchmakingStatus(), 5000);
     },
 
     async loadInitialData() {
@@ -930,8 +931,8 @@ const App = {
             statusText = isMyTurn ? 'YOUR TURN TO VETO' : "OPPONENT'S TURN";
             document.getElementById('veto-status-text').style.color = isMyTurn ? '#10b981' : '#f59e0b';
         } else if (v.status === 'Completed' || v.status === 1) { // Completed
-            statusText = 'MAP SELECTED!';
-            document.getElementById('veto-status-text').style.color = '#6366f1';
+            statusText = 'Server Starting...';
+            document.getElementById('veto-status-text').style.color = '#10b981';
         }
 
         document.getElementById('veto-status-text').innerText = statusText;

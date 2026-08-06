@@ -16,6 +16,8 @@ using Serilog;
 using StackExchange.Redis;
 using System.Text;
 using System.Threading.RateLimiting;
+using Hangfire;
+using Hangfire.PostgreSql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -125,7 +127,6 @@ if (runWorker)
     builder.Services.AddHostedService<MatchmakingWorker>();
     builder.Services.AddHostedService<MatchCleanupWorker>();
     builder.Services.AddHostedService<MatchmakingEngine.HostedServices.LeaderboardSeederWorker>();
-    builder.Services.AddHostedService<MatchmakingEngine.HostedServices.MapVetoWorker>();
 }
 
 var dbConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
@@ -170,6 +171,13 @@ builder.Services.AddRateLimiter(options =>
             }));
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 });
+
+builder.Services.AddHangfire(config => config
+.UseSimpleAssemblyNameTypeSerializer()
+.UseRecommendedSerializerSettings()
+.UsePostgreSqlStorage(c => c.UseNpgsqlConnection(dbConnectionString)));
+
+builder.Services.AddHangfireServer();
 
 var app = builder.Build();
 

@@ -1,10 +1,11 @@
-using MediatR;
-using MatchmakingEngine.Domain;
-using MatchmakingEngine.DTO;
-using MatchmakingEngine.Domain.Exceptions;
-using Microsoft.Extensions.Logging;
+using Hangfire;
+using MatchmakingEngine.Application.Application.Commands.Matchmaking;
 using MatchmakingEngine.Application.Interfaces.Repositories;
-
+using MatchmakingEngine.Domain;
+using MatchmakingEngine.Domain.Exceptions;
+using MatchmakingEngine.DTO;
+using MediatR;
+using Microsoft.Extensions.Logging;
 
 namespace MatchmakingEngine.Application.Commands.Matchmaking;
 
@@ -13,15 +14,18 @@ public class AcceptMatchCommandHandler : IRequestHandler<AcceptMatchCommand, Acc
     private readonly IMatchRepository _matchRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<AcceptMatchCommandHandler> _logger;
+    private readonly IBackgroundJobClient _backgroundJobClient;
 
     public AcceptMatchCommandHandler(
         IMatchRepository matchRepository,
         IUnitOfWork unitOfWork,
-        ILogger<AcceptMatchCommandHandler> logger)
+        ILogger<AcceptMatchCommandHandler> logger,
+        IBackgroundJobClient backgroundJobClient)
     {
         _matchRepository = matchRepository;
         _unitOfWork = unitOfWork;
         _logger = logger;
+        _backgroundJobClient = backgroundJobClient;
     }
 
     public async Task<AcceptMatchResult> Handle(AcceptMatchCommand request, CancellationToken cancellationToken)
@@ -57,6 +61,9 @@ public class AcceptMatchCommandHandler : IRequestHandler<AcceptMatchCommand, Acc
             match.VetoDeadLine = DateTimeOffset.UtcNow.AddSeconds(30);
 
             _logger.LogInformation("[GAME START] All players accepted! Match {MatchId}  entering Map Veto phase. First turn: {PlayerId}", match.Id, match.CurrentVetoTurnPlayerId);
+            _backgroundJobClient.Schedule<IMediator>(
+                m => m.Publish(new MapVetoTimeoutEvent(match.Id), CancellationToken.None),
+                TimeSpan.FromSeconds(30));
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
 

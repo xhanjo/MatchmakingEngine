@@ -1,14 +1,15 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+using Hangfire;
 using MatchmakingEngine.Application.Commands.Matchmaking;
 using MatchmakingEngine.Application.Interfaces.Repositories;
 using MatchmakingEngine.Domain;
 using MatchmakingEngine.Domain.Exceptions;
 using Microsoft.Extensions.Logging;
 using Moq;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace MatchmakingEngine.Tests.Application.Commands;
@@ -19,17 +20,20 @@ public class AcceptMatchCommandHandlerTests
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<ILogger<AcceptMatchCommandHandler>> _loggerMock;
     private readonly AcceptMatchCommandHandler _handler;
+    private readonly Mock<IBackgroundJobClient> _backgroundJobClientMock;
 
     public AcceptMatchCommandHandlerTests()
     {
         _matchRepositoryMock = new Mock<IMatchRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _loggerMock = new Mock<ILogger<AcceptMatchCommandHandler>>();
+        _backgroundJobClientMock = new Mock<IBackgroundJobClient>();
 
         _handler = new AcceptMatchCommandHandler(
-            _matchRepositoryMock.Object,
-            _unitOfWorkMock.Object,
-            _loggerMock.Object);
+           _matchRepositoryMock.Object,
+           _unitOfWorkMock.Object,
+           _loggerMock.Object,
+           _backgroundJobClientMock.Object);
     }
 
     [Fact]
@@ -45,7 +49,7 @@ public class AcceptMatchCommandHandlerTests
             Players = new List<MatchPlayer>
             {
                 new MatchPlayer { PlayerId = player1Id, Accepted = false },
-                new MatchPlayer { PlayerId = player2Id, Accepted = true } 
+                new MatchPlayer { PlayerId = player2Id, Accepted = true }
             }
         };
 
@@ -56,9 +60,9 @@ public class AcceptMatchCommandHandlerTests
 
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        Assert.True(result.AllAccepted); 
-        Assert.Equal(MatchStatus.MapVeto, match.Status); 
-        Assert.True(match.Players.First(p => p.PlayerId == player1Id).Accepted); 
+        Assert.True(result.AllAccepted);
+        Assert.Equal(MatchStatus.MapVeto, match.Status);
+        Assert.True(match.Players.First(p => p.PlayerId == player1Id).Accepted);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 }

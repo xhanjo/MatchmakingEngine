@@ -36,6 +36,9 @@ public class GetLeaderboardQueryHandler : IRequestHandler<GetLeaderboardQuery, L
         {
             if (playerDict.TryGetValue(p.playerId, out var playerInfo))
             {
+                if (playerInfo.Role == MatchmakingEngine.Domain.PlayerRole.Admin)
+                    continue;
+                
                 result.Add(new LeaderboardEntryDto(
                     currentRank++,
                     playerInfo.Id,

@@ -80,10 +80,10 @@
     <!-- ══════════════════════════════════════════
          MAIN LAYOUT (SPA VIEWS)
          ══════════════════════════════════════════ -->
-    <div id="views-container" class="flex flex-1 overflow-hidden relative">
+    <div id="views-container" class="flex flex-col flex-1 overflow-hidden relative">
 
         <!-- ── VIEW: LOBBY ── -->
-        <section id="view-lobby" class="w-full h-full flex overflow-hidden">
+        <section id="view-lobby" class="w-full flex-1 flex overflow-hidden">
             <!-- Left: Matchmaking Area -->
             <main class="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
 
@@ -149,7 +149,7 @@
         </section>
 
         <!-- ── VIEW: LEADERBOARD ── -->
-        <section id="view-leaderboard" class="w-full h-full overflow-y-auto p-6 hidden">
+        <section id="view-leaderboard" class="w-full flex-1 overflow-y-auto p-6 hidden">
             <div class="max-w-4xl mx-auto flex flex-col gap-6">
                 <div class="flex items-center gap-3">
                     <div class="text-3xl">🏆</div>
@@ -174,7 +174,7 @@
         </section>
 
         <!-- ── VIEW: ADMIN ── -->
-        <section id="view-admin" class="w-full h-full overflow-y-auto p-6 hidden">
+        <section id="view-admin" class="w-full flex-1 overflow-y-auto p-6 hidden">
             <div class="max-w-6xl mx-auto flex flex-col gap-8">
                 <!-- Active Matches -->
                 <div>
@@ -254,7 +254,7 @@
         </section>
 
         <!-- ── VIEW: MATCH ROOM (MAP VETO) ── -->
-        <section id="view-match-room" class="w-full h-full flex flex-col bg-app-bg hidden overflow-y-auto">
+        <section id="view-match-room" class="w-full flex-1 flex flex-col bg-app-bg hidden overflow-y-auto">
             <div class="p-8 flex flex-col items-center gap-6 max-w-6xl mx-auto w-full">
                 
                 <div class="text-center mb-4">

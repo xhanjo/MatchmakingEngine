@@ -49,7 +49,7 @@ public class AcceptMatchCommandHandlerTests
             }
         };
 
-        _matchRepositoryMock.Setup(repo => repo.GetByIdWithPlayersAsync(matchId, true, It.IsAny<CancellationToken>()))
+        _matchRepositoryMock.Setup(repo => repo.GetByIdWithPlayersAsync(matchId, It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(match);
 
         var command = new AcceptMatchCommand(player1Id, matchId);
@@ -57,8 +57,8 @@ public class AcceptMatchCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         Assert.True(result.AllAccepted); 
-        Assert.Equal(MatchStatus.Accepted, match.Status); 
+        Assert.Equal(MatchStatus.MapVeto, match.Status); 
         Assert.True(match.Players.First(p => p.PlayerId == player1Id).Accepted); 
-        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 }

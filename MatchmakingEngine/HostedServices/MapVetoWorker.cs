@@ -40,27 +40,9 @@ public class MapVetoWorker : BackgroundService
                 {
                     try
                     {
-                        var timedOutMatches = await matchRepo.GetMatchesInVetoTimeoutAsync(DateTimeOffset.UtcNow, cancellationToken);
-
-                        foreach (var match in timedOutMatches)
-                        {
-                            if (match.AvailableMaps.Any() && match.CurrentVetoTurnPlayerId.HasValue)
-                            {
-                                var randomMap = match.AvailableMaps[new Random().Next(match.AvailableMaps.Count)];
-
-                                _logger.LogWarning("[VetoWorker] Player {PlayerId} AFK! Auto-banning map {MapName} for Match {MatchId}",
-                                    match.CurrentVetoTurnPlayerId, randomMap, match.Id);
-
-                                var result = await meditor.Send(new BanMapCommand(match.Id, match.CurrentVetoTurnPlayerId.Value, randomMap), cancellationToken);
-
-                                var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<MatchmakingHub>>();
-                                foreach (var pid in result.PlayerIds)
-                                {
-                                    await hubContext.Clients.Group(pid.ToString()).SendAsync("MapVetoUpdated", result.VetoState);
-                                }
-                            }
-                        }
-                    } 
+                        var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<MatchmakingHub>>();
+                        await ProcessMapVetoTimeoutsAsync(matchRepo, meditor, hubContext, cancellationToken);
+                    }
                     finally
                     {
                         await db.LockReleaseAsync(lockKey, lockToken);
@@ -72,6 +54,33 @@ public class MapVetoWorker : BackgroundService
                 _logger.LogError(ex, "Error in VetoWorker");
             }
             await Task.Delay(5000, cancellationToken);
+        }
+    }
+
+    internal async Task ProcessMapVetoTimeoutsAsync(
+        IMatchRepository matchRepo,
+        IMediator mediator,
+        IHubContext<MatchmakingHub> hubContext,
+        CancellationToken cancellationToken)
+    {
+        var timedOutMatches = await matchRepo.GetMatchesInVetoTimeoutAsync(DateTimeOffset.UtcNow, cancellationToken);
+
+        foreach (var match in timedOutMatches)
+        {
+            if (match.AvailableMaps.Any() && match.CurrentVetoTurnPlayerId.HasValue)
+            {
+                var randomMap = match.AvailableMaps[new Random().Next(match.AvailableMaps.Count)];
+
+                _logger.LogWarning("[VetoWorker] Player {PlayerId} AFK! Auto-banning map {MapName} for Match {MatchId}",
+                    match.CurrentVetoTurnPlayerId, randomMap, match.Id);
+
+                var result = await mediator.Send(new BanMapCommand(match.Id, match.CurrentVetoTurnPlayerId.Value, randomMap), cancellationToken);
+
+                foreach (var pid in result.PlayerIds)
+                {
+                    await hubContext.Clients.Group(pid.ToString()).SendAsync("MapVetoUpdated", result.VetoState, cancellationToken: cancellationToken);
+                }
+            }
         }
     }
 }

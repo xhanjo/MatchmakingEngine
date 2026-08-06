@@ -13,7 +13,6 @@ public class MatchmakingWorker : BackgroundService
     private readonly IHubContext<MatchmakingHub> _hubContext;
     private GameMode _currentModeToProcess = GameMode.Solo;
 
-    private const double MaxTrustDifference = 0.3;
     public MatchmakingWorker(
         IMatchmakingQueue queue,
         ILogger<MatchmakingWorker> logger,
@@ -61,6 +60,7 @@ public class MatchmakingWorker : BackgroundService
         var currentDelta = Math.Min(300, 50 + waitTimeSeconds.TotalSeconds * 5);
         var minMmr = anchor.Mmr - currentDelta;
         var maxMmr = anchor.Mmr + currentDelta;
+        var MaxTrustDifference = Math.Min(1.0, 0.3 + (waitTimeSeconds.TotalSeconds / 15.0) * 0.1);
 
         var candidateIds = await _queue.GetCandidatesByMmrRangeAsync(anchor.Region, gameMode, minMmr, maxMmr);
 

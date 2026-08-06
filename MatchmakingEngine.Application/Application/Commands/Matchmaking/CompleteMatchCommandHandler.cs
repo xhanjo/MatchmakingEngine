@@ -91,9 +91,26 @@ public class CompleteMatchCommandHandler : IRequestHandler<CompleteMatchCommand,
         mvpPlayer.IsMvp = true;
 
         var scoreboard = new List<PlayerStatsDto>();
+
+        var team1AvgMmr = team1Players.Any() ? team1Players.Average(p => p.Player.Mmr) : 1000;
+        var team2AvgMmr = team2Players.Any() ? team2Players.Average(p => p.Player.Mmr) : 1000;
+
+        var expectedScore1 = 1.0 / (1.0 + Math.Pow(10.0, (team2AvgMmr - team1AvgMmr) / 400.0));
+        var expectedScore2 = 1.0 / (1.0 + Math.Pow(10.0, (team1AvgMmr - team2AvgMmr) / 400.0));
+
+        var actualScore1 = winningTeam == 1 ?  1.0 : 0.0;
+        var actualScore2 = winningTeam == 2 ? 1.0 : 0.0;
+
+        int kFactor = 50;
+        int team1MmrChange = (int)Math.Round(kFactor * (actualScore1 - expectedScore1));
+        int team2MmrChange = (int)Math.Round(kFactor * (actualScore2 - expectedScore2));
+
         foreach (var p in match.Players)
         {
-            int mmrChange = p.Team == winningTeam ? 25 : -25;
+            int mmrChange = p.Team == 1 ? team1MmrChange : team2MmrChange;
+            if (p.Player.Mmr + mmrChange < 0)
+                mmrChange = -p.Player.Mmr;
+
             p.Player.Mmr += mmrChange;
 
             p.Player.TrustFactor = Math.Min(1.0, p.Player.TrustFactor + 0.02);

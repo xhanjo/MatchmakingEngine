@@ -8,9 +8,7 @@ const SignalRManager = {
         const hubUrl = 'http://localhost:5001/hubs/matchmaking';
         
         this.connection = new signalR.HubConnectionBuilder()
-            .withUrl(hubUrl, {
-                accessTokenFactory: () => token
-            })
+            .withUrl(hubUrl)
             .withAutomaticReconnect()
             .build();
             

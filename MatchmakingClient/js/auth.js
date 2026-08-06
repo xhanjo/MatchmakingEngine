@@ -2,23 +2,33 @@
 
 const Auth = {
     getToken() {
-        return localStorage.getItem('jwt_token');
+        return ""; // Токен більше не доступний клієнту
     },
     
     setToken(token) {
-        localStorage.setItem('jwt_token', token);
+        // Ми отримуємо токен від бекенду під час логіну лише один раз
+        // Розкодовуємо його і зберігаємо лише корисну інформацію (ID, Ім'я, Роль)
+        try {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            localStorage.setItem('user_payload', jsonPayload);
+        } catch (e) {
+            console.error("Failed to decode and save token payload", e);
+        }
     },
 
     clearToken() {
-        localStorage.removeItem('jwt_token');
+        localStorage.removeItem('user_payload');
     },
 
     isLoggedIn() {
-        const token = this.getToken();
-        if (!token) return false;
+        const payload = this.getDecodedToken();
+        if (!payload) return false;
         
         try {
-            const payload = this.getDecodedToken();
             const exp = payload.exp * 1000;
             return Date.now() < exp;
         } catch (e) {
@@ -27,17 +37,11 @@ const Auth = {
     },
 
     getDecodedToken() {
-        const token = this.getToken();
-        if (!token) return null;
+        const payloadJson = localStorage.getItem('user_payload');
+        if (!payloadJson) return null;
         try {
-            const base64Url = token.split('.')[1];
-            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-            }).join(''));
-            return JSON.parse(jsonPayload);
+            return JSON.parse(payloadJson);
         } catch (e) {
-            console.error("Failed to decode token", e);
             return null;
         }
     },
@@ -72,8 +76,14 @@ const Auth = {
         }
     },
 
-    logout() {
+    async logout() {
         this.clearToken();
+        try {
+            await fetch('http://localhost:5001/api/Auth/logout', { 
+                method: 'POST',
+                credentials: 'include' 
+            });
+        } catch (e) {}
         window.location.href = 'login.html';
     }
 };

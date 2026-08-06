@@ -23,10 +23,22 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         var command = new LoginCommand(request.Username, request.Password);
-
         var token = await _mediator.Send(command);
+
+        Response.Cookies.Append("jwt", token, new CookieOptions
+        {
+            HttpOnly = true,
+            SameSite = SameSiteMode.Lax,
+            Expires = DateTime.UtcNow.AddHours(2)
+        });
 
         return Ok(new LoginResponseDto(token));
     }
-    
+
+    [HttpPost("logout")]
+    public IActionResult Logout()
+    {
+        Response.Cookies.Delete("jwt");
+        return Ok();
+    }
 }

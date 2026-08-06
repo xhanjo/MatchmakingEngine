@@ -74,6 +74,11 @@ builder.Services.AddAuthentication(options =>
     {
         OnMessageReceived = context =>
         {
+            if (context.Request.Cookies.TryGetValue("jwt", out var cookieToken))
+            { 
+                context.Token = cookieToken;
+            }
+
             var accessToken = context.Request.Query["access_token"];
             var path = context.HttpContext.Request.Path;
             if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/matchmaking"))

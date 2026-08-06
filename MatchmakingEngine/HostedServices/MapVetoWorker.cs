@@ -3,6 +3,7 @@ using MatchmakingEngine.Application.Interfaces.Repositories;
 using MatchmakingEngine.Hubs;
 using MediatR;
 using Microsoft.AspNetCore.SignalR;
+using StackExchange.Redis;
 
 namespace MatchmakingEngine.HostedServices;
 
@@ -29,24 +30,40 @@ public class MapVetoWorker : BackgroundService
                 var matchRepo = scope.ServiceProvider.GetRequiredService<IMatchRepository>();
                 var meditor = scope.ServiceProvider.GetRequiredService<IMediator>();
 
-                var timedOutMatches = await matchRepo.GetMatchesInVetoTimeoutAsync(DateTimeOffset.UtcNow, cancellationToken);
+                var redis = scope.ServiceProvider.GetRequiredService<IConnectionMultiplexer>();
+                var db = redis.GetDatabase();
 
-                foreach (var match in timedOutMatches)
+                var lockKey = "lock:map_veto_worker";
+                var lockToken = Guid.NewGuid().ToString();
+
+                if (await db.LockTakeAsync(lockKey, lockToken, TimeSpan.FromSeconds(4)))
                 {
-                    if (match.AvailableMaps.Any() && match.CurrentVetoTurnPlayerId.HasValue)
+                    try
                     {
-                        var randomMap = match.AvailableMaps[new Random().Next(match.AvailableMaps.Count)];
+                        var timedOutMatches = await matchRepo.GetMatchesInVetoTimeoutAsync(DateTimeOffset.UtcNow, cancellationToken);
 
-                        _logger.LogWarning("[VetoWorker] Player {PlayerId} AFK! Auto-banning map {MapName} for Match {MatchId}",
-                            match.CurrentVetoTurnPlayerId, randomMap, match.Id);
-
-                        var result = await meditor.Send(new BanMapCommand(match.Id, match.CurrentVetoTurnPlayerId.Value, randomMap), cancellationToken);
-                        
-                        var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<MatchmakingHub>>();
-                        foreach (var pid in result.PlayerIds)
+                        foreach (var match in timedOutMatches)
                         {
-                            await hubContext.Clients.Group(pid.ToString()).SendAsync("MapVetoUpdated", result.VetoState);
-                        }    
+                            if (match.AvailableMaps.Any() && match.CurrentVetoTurnPlayerId.HasValue)
+                            {
+                                var randomMap = match.AvailableMaps[new Random().Next(match.AvailableMaps.Count)];
+
+                                _logger.LogWarning("[VetoWorker] Player {PlayerId} AFK! Auto-banning map {MapName} for Match {MatchId}",
+                                    match.CurrentVetoTurnPlayerId, randomMap, match.Id);
+
+                                var result = await meditor.Send(new BanMapCommand(match.Id, match.CurrentVetoTurnPlayerId.Value, randomMap), cancellationToken);
+
+                                var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<MatchmakingHub>>();
+                                foreach (var pid in result.PlayerIds)
+                                {
+                                    await hubContext.Clients.Group(pid.ToString()).SendAsync("MapVetoUpdated", result.VetoState);
+                                }
+                            }
+                        }
+                    } 
+                    finally
+                    {
+                        await db.LockReleaseAsync(lockKey, lockToken);
                     }
                 }
             }

@@ -256,4 +256,6 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
+app.MapGet("/", () => "Matchmaking Engine API is running!");
+
 app.Run();

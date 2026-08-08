@@ -1,0 +1,37 @@
+name: .NET CD (Deploy to AWS)
+
+on:
+  workflow_run:
+    workflows: [".NET CI"]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    name: Deploy to Elastic Beanstalk
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Prepare Deployment Package
+      run: |
+        # Видаляємо локальний docker-compose, щоб AWS не намагався підняти свої бази даних
+        rm docker-compose.yml
+        # Переносимо Dockerfile в корінь, щоб AWS знав, як зібрати проєкт
+        cp MatchmakingEngine/Dockerfile Dockerfile
+        # Пакуємо весь проєкт у ZIP-архів (без папки .git)
+        zip -r deploy.zip . -x "*.git*"
+
+    - name: Deploy to Elastic Beanstalk
+      uses: einaregilsson/beanstalk-deploy@v22
+      with:
+        aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        application_name: matchmaking-engine
+        environment_name: Matchmaking-engine-env
+        version_label: ${{ github.sha }}
+        region: eu-north-1
+        deployment_package: deploy.zip

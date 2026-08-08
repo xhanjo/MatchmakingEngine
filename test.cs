@@ -1,0 +1,1 @@
+using System; class Program { static void Main() { var mode = Ranked5v5; Console.WriteLine(${{matchmaking_queue_{mode}}}); Console.WriteLine(${{matchmaking_queue_{mode}}}_processing); } }

@@ -15,8 +15,8 @@ public class MatchmakingQueue : IMatchmakingQueue
         _redisDb = redisConnection.GetDatabase();
     }
 
-    private string GetEvaluationQueueKey(GameMode mode) => $"{{matchmaking_queue_{mode}}}";
-    private string GetProcessingQueueKey(GameMode mode) => $"{{matchmaking_queue_{mode}}}_processing";
+    private string GetEvaluationQueueKey(GameMode mode) => $"{{queue_{mode}}}:eval";
+    private string GetProcessingQueueKey(GameMode mode) => $"{{queue_{mode}}}:proc";
     private string GetMmrIndexKey(GameMode mode, PlayerRegion region) => $"Mmr_index:{mode}:{region}";
 
     public async ValueTask EnqueueAsync(MatchmakingTicket ticket)

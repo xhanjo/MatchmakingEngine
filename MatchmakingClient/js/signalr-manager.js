@@ -5,10 +5,11 @@ const SignalRManager = {
         if (!Auth.isLoggedIn()) return;
         
         const token = Auth.getToken();
-        const hubUrl = 'http://localhost:5001/hubs/matchmaking';
+        // Base API URL is like http://.../api, so we replace '/api' with '/hubs/matchmaking'
+        const hubUrl = API_URL.replace('/api', '/hubs/matchmaking');
         
         this.connection = new signalR.HubConnectionBuilder()
-            .withUrl(hubUrl)
+            .withUrl(hubUrl, { accessTokenFactory: () => token })
             .withAutomaticReconnect()
             .build();
             

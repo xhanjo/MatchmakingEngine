@@ -1,15 +1,17 @@
-const API_URL = 'http://localhost:5001/api';
+const API_URL = 'http://matchmaking-engine-env.eba-mrkcxifv.eu-north-1.elasticbeanstalk.com/api';
 
 const Api = {
     async request(endpoint, options = {}) {
         const url = `${API_URL}${endpoint}`;
         
+        const token = Auth.getToken();
         const headers = {
             'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
             ...(options.headers || {})
         };
 
-        const response = await fetch(url, { ...options, headers, credentials: 'include' });
+        const response = await fetch(url, { ...options, headers });
         
         if (response.status === 401) {
             if (!window.location.href.includes('login.html') && !window.location.href.includes('register.html')) {

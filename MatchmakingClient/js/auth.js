@@ -2,7 +2,7 @@
 
 const Auth = {
     getToken() {
-        return ""; // Токен більше не доступний клієнту
+        return localStorage.getItem('jwt_token') || "";
     },
     
     setToken(token) {
@@ -15,6 +15,7 @@ const Auth = {
                 return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
             }).join(''));
             localStorage.setItem('user_payload', jsonPayload);
+            localStorage.setItem('jwt_token', token);
         } catch (e) {
             console.error("Failed to decode and save token payload", e);
         }
@@ -22,6 +23,7 @@ const Auth = {
 
     clearToken() {
         localStorage.removeItem('user_payload');
+        localStorage.removeItem('jwt_token');
     },
 
     isLoggedIn() {
@@ -79,9 +81,9 @@ const Auth = {
     async logout() {
         this.clearToken();
         try {
-            await fetch('http://localhost:5001/api/Auth/logout', { 
+            await fetch(`${API_URL}/Auth/logout`, { 
                 method: 'POST',
-                credentials: 'include' 
+                headers: { 'Authorization': `Bearer ${this.getToken()}` }
             });
         } catch (e) {}
         window.location.href = 'login.html';

@@ -385,14 +385,13 @@ const App = {
                 results.slice(0, 5).forEach(p => {
                     const item = document.createElement('div');
                     item.className = 'list-item';
+                    item.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:10px 12px; margin-bottom:6px; border-radius:8px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06);';
                     item.innerHTML = `
-                        <div class="item-info">
-                            <span class="item-name">${Utils.escapeHtml(p.username)}</span>
-                            <span class="item-sub"><span class="mmr-badge">${p.mmr} MMR</span></span>
+                        <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+                            <span class="item-name" style="font-weight:600; white-space:nowrap;">${Utils.escapeHtml(p.username)}</span>
+                            <span class="mmr-badge" style="font-size:0.7rem; padding:2px 8px; border-radius:4px; white-space:nowrap;">${p.mmr} MMR</span>
                         </div>
-                        <div class="item-actions">
-                            <button class="btn btn-primary btn-sm" onclick="App.addFriend('${p.id}')">Add</button>
-                        </div>
+                        <button class="btn btn-primary btn-sm" style="margin-left:12px; padding:4px 14px; font-size:0.75rem; white-space:nowrap;" onclick="App.addFriend('${p.id}')">Add</button>
                     `;
                     resultsContainer.appendChild(item);
                 });
@@ -481,6 +480,7 @@ const App = {
             if (!scoreboard) {
                 Utils.showToast("Match finished!", "success");
                 this.state.currentMatchId = null;
+                this.state.status = 'Idle';
                 this.updateMatchmakingStatus();
                 return;
             }
@@ -497,12 +497,21 @@ const App = {
                 
                 const kills = myStats.kills || myStats.Kills || 0;
                 const deaths = myStats.deaths || myStats.Deaths || 0;
+                const mmrChange = myStats.mmrChange || myStats.MmrChange || 0;
+                const mmrStr = mmrChange >= 0 ? `+${mmrChange}` : `${mmrChange}`;
                 
                 const msg = isWinner ? "You won!" : "You lost!";
-                Utils.showToast(`Match Finished: ${msg} (Kills: ${kills}, Deaths: ${deaths})`, isWinner ? "success" : "error", 5000);
+                Utils.showToast(`Match Finished: ${msg} K:${kills} D:${deaths} MMR: ${mmrStr}`, isWinner ? "success" : "error", 5000);
             }
             
             this.state.currentMatchId = null;
+            this.state.status = 'Idle';
+            this.stopVetoTimer();
+            
+            // Navigate to profile and reload data so MMR updates immediately
+            window.location.hash = '#profile';
+            this.loadProfile();
+            this.loadLeaderboard();
             this.updateMatchmakingStatus();
         } catch (e) {
             console.error("Error displaying match result:", e);
@@ -664,6 +673,8 @@ const App = {
                     const accentColor = isWinner ? '#10b981' : '#ef4444'; // Green for win, Red for loss
                     const outcomeText = isWinner ? 'WIN' : 'LOSS';
 
+                    const mapName = match.selectedMap || 'Unknown';
+
                     return `
                         <div style="background:#0d1018; border:1px solid #1c2035; border-left:3px solid ${accentColor}; border-radius:10px; padding:13px 16px; margin-bottom:8px;">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
@@ -671,6 +682,7 @@ const App = {
                                     <span style="font-family:Outfit; font-weight:700; font-size:0.85rem; color:#e2e8f0;">${modeText}</span>
                                     <span style="background:${accentColor}15; color:${accentColor}; border:1px solid ${accentColor}30; font-family:Outfit; font-weight:700; font-size:0.65rem; padding:1px 7px; border-radius:10px;">${outcomeText}</span>
                                     ${isMvp ? '<span style="background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.3); color:#fbbf24; font-family:Outfit; font-weight:700; font-size:0.65rem; padding:1px 7px; border-radius:10px;">⭐ MVP</span>' : ''}
+                                    <span style="background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.3); color:#818cf8; font-family:Outfit; font-weight:700; font-size:0.65rem; padding:1px 7px; border-radius:10px;">🗺️ ${mapName}</span>
                                 </div>
                                 <span style="font-size:0.7rem; color:#334155;">${new Date(match.createdAt).toLocaleDateString()}</span>
                             </div>
@@ -885,13 +897,43 @@ const App = {
         document.querySelector('#veto-team2 .team-name').innerText = team2;
         
         this.renderMapVetoUI();
+        this.startVetoTimer(30);
         Utils.showToast('Map veto phase has started!', 'info');
+    },
+
+    startVetoTimer(seconds) {
+        if (this._vetoTimerInterval) clearInterval(this._vetoTimerInterval);
+        this._vetoTimeLeft = seconds;
+        const timerEl = document.getElementById('veto-timer');
+        if (timerEl) timerEl.innerText = this._vetoTimeLeft;
+        this._vetoTimerInterval = setInterval(() => {
+            this._vetoTimeLeft--;
+            if (timerEl) timerEl.innerText = Math.max(0, this._vetoTimeLeft);
+            if (this._vetoTimeLeft <= 0) {
+                clearInterval(this._vetoTimerInterval);
+                this._vetoTimerInterval = null;
+            }
+        }, 1000);
+    },
+
+    stopVetoTimer() {
+        if (this._vetoTimerInterval) {
+            clearInterval(this._vetoTimerInterval);
+            this._vetoTimerInterval = null;
+        }
     },
 
     onMapVetoUpdated(vetoState) {
         console.log('Map Veto Updated!', vetoState);
         this.state.vetoState = vetoState;
         this.renderMapVetoUI();
+
+        // Restart timer for next turn (if veto still in progress)
+        if (vetoState.status === 'InProgress' || vetoState.status === 0) {
+            this.startVetoTimer(30);
+        } else {
+            this.stopVetoTimer();
+        }
         
         // Find last banned map to add to log
         const logContainer = document.getElementById('veto-log');
@@ -900,10 +942,17 @@ const App = {
             if (lastMap) {
                 this._loggedBans = this._loggedBans || new Set();
                 this._loggedBans.add(lastMap.name);
+
+                // Determine which team banned this map
+                let teamLabel = 'Player';
+                if (lastMap.bannedByUsername) {
+                    const isTeam1 = vetoState.team1.some(p => p.username === lastMap.bannedByUsername);
+                    teamLabel = isTeam1 ? 'Team 1' : 'Team 2';
+                }
                 
                 const logItem = document.createElement('div');
                 logItem.className = 'text-danger font-display text-xs p-1 bg-danger/10 rounded border border-danger/20 mb-1 animate-pulse';
-                logItem.innerText = `${lastMap.bannedByUsername || 'Player'} banned ${lastMap.name}`;
+                logItem.innerText = `${teamLabel} banned ${lastMap.name}`;
                 logContainer.appendChild(logItem);
                 logContainer.scrollTop = logContainer.scrollHeight;
             }

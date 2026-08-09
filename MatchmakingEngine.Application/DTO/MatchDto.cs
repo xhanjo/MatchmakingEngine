@@ -20,5 +20,6 @@ public record MatchDto(
     MatchStatus Status,
     DateTimeOffset CreatedAt,
     GameMode GameMode,
+    string? SelectedMap,
     List<MatchPlayerDto> Players
 );

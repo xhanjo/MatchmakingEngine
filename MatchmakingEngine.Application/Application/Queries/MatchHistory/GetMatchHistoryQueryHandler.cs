@@ -35,6 +35,7 @@ public class GetMatchHistoryQueryHandler : IRequestHandler<GetMatchHistoryQuery,
                     m.Status,
                     m.CreatedAt,
                     m.GameMode,
+                    m.SelectedMap ?? (m.AvailableMaps.Count == 1 ? m.AvailableMaps[0] : null),
                     m.Players.Select(p => new MatchPlayerDto(
                        p.PlayerId,
                        p.Player.Username,

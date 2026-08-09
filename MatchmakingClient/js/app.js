@@ -55,8 +55,21 @@ const App = {
         await Promise.all([
             this.loadFriends(),
             this.loadParty(),
-            this.updateMatchmakingStatus()
+            this.updateMatchmakingStatus(),
+            this.loadMyMmr()
         ]);
+    },
+
+    async loadMyMmr() {
+        try {
+            const player = await Api.getPlayer(Auth.getUserId());
+            const displayEl = document.getElementById('nav-mmr-display');
+            if (displayEl && player) {
+                displayEl.innerText = `${player.mmr} MMR`;
+            }
+        } catch (error) {
+            console.error('Failed to load my MMR', error);
+        }
     },
 
     async loadFriends() {
@@ -514,6 +527,7 @@ const App = {
             this.handleRoute();
             this.loadProfile();
             this.loadLeaderboard();
+            this.loadMyMmr();
             this.updateMatchmakingStatus();
         } catch (e) {
             console.error("Error displaying match result:", e);

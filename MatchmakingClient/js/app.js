@@ -163,10 +163,11 @@ const App = {
                     inviteBtn = `<button class="btn btn-primary btn-sm" onclick="App.inviteToParty('${friend.playerId}')">Invite</button>`;
                 }
 
+                item.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:10px 12px; margin-bottom:6px; border-radius:8px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06);';
                 item.innerHTML = `
-                    <div class="item-info">
-                        <span class="item-name">${Utils.escapeHtml(friend.username)}</span>
-                        <span class="item-sub"><span class="mmr-badge">${friend.mmr} MMR</span></span>
+                    <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+                        <span class="item-name" style="font-weight:600; white-space:nowrap;">${Utils.escapeHtml(friend.username)}</span>
+                        <span class="mmr-badge" style="font-size:0.7rem; padding:2px 8px; border-radius:4px; white-space:nowrap;">${friend.mmr} MMR</span>
                     </div>
                     <div class="item-actions">
                         ${inviteBtn}
@@ -508,8 +509,9 @@ const App = {
             this.state.status = 'Idle';
             this.stopVetoTimer();
             
-            // Navigate to profile and reload data so MMR updates immediately
-            window.location.hash = '#profile';
+            // Navigate back to lobby and force route refresh
+            window.location.hash = '#lobby';
+            this.handleRoute();
             this.loadProfile();
             this.loadLeaderboard();
             this.updateMatchmakingStatus();
@@ -518,6 +520,8 @@ const App = {
             Utils.showToast("Match Finished!", "success");
             this.state.currentMatchId = null;
             this.updateMatchmakingStatus();
+            window.location.hash = '#lobby';
+            this.handleRoute();
         }
     },
 
@@ -925,6 +929,10 @@ const App = {
 
     onMapVetoUpdated(vetoState) {
         console.log('Map Veto Updated!', vetoState);
+        
+        // Capture the previous turn team before updating state
+        const previousTurnTeam = this.state.vetoState ? this.state.vetoState.currentTurnTeam : 1;
+        
         this.state.vetoState = vetoState;
         this.renderMapVetoUI();
 
@@ -943,12 +951,8 @@ const App = {
                 this._loggedBans = this._loggedBans || new Set();
                 this._loggedBans.add(lastMap.name);
 
-                // Determine which team banned this map
-                let teamLabel = 'Player';
-                if (lastMap.bannedByUsername) {
-                    const isTeam1 = vetoState.team1.some(p => p.username === lastMap.bannedByUsername);
-                    teamLabel = isTeam1 ? 'Team 1' : 'Team 2';
-                }
+                // Determine which team banned this map using the previous turn state
+                const teamLabel = previousTurnTeam === 1 ? 'Team 1' : 'Team 2';
                 
                 const logItem = document.createElement('div');
                 logItem.className = 'text-danger font-display text-xs p-1 bg-danger/10 rounded border border-danger/20 mb-1 animate-pulse';

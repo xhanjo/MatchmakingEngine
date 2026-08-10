@@ -1,5 +1,14 @@
 # MatchmakingEngine
 
+![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)
+![ASP.NET Core](https://img.shields.io/badge/ASP.NET_Core-Web_API-512BD4?logo=dotnet)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white)
+![SignalR](https://img.shields.io/badge/SignalR-Real--time-512BD4?logo=dotnet)
+![Hangfire](https://img.shields.io/badge/Hangfire-Background_Jobs-2C3E50)
+![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?logo=docker&logoColor=white)
+![AWS](https://img.shields.io/badge/AWS-Elastic_Beanstalk-FF9900?logo=amazonaws&logoColor=white)
+
 A real-time competitive matchmaking backend built with .NET 10 and ASP.NET Core. The project implements core platform features analogous to FACEIT or CS2's competitive system: MMR-based queuing, party management, a map veto phase with AFK auto-ban, post-match statistics, and a real-time leaderboard.
 
 ---
@@ -122,7 +131,14 @@ A global fixed-window rate limiter is applied at the ASP.NET Core middleware lev
 
 **Prerequisites:** .NET 10 SDK, Docker Desktop
 
-### 1. Start infrastructure
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/xhanjo/MatchmakingEngine.git
+cd MatchmakingEngine
+```
+
+### 2. Start infrastructure
 
 ```bash
 docker-compose up -d
@@ -130,7 +146,7 @@ docker-compose up -d
 
 This starts PostgreSQL on port `5432` and Redis on port `6379`. The compose file also defines two API replicas (`api1`, `api2`) behind a shared Redis SignalR backplane, demonstrating horizontal scalability.
 
-### 2. Configure secrets
+### 3. Configure secrets
 
 Copy `appsettings.json` and fill in the JWT key:
 
@@ -150,7 +166,7 @@ Copy `appsettings.json` and fill in the JWT key:
 }
 ```
 
-### 3. Run the API
+### 4. Run the API
 
 ```bash
 dotnet run --project MatchmakingEngine/MatchmakingEngine.csproj
@@ -158,13 +174,13 @@ dotnet run --project MatchmakingEngine/MatchmakingEngine.csproj
 
 EF Core migrations are applied automatically on startup with a retry policy (5 attempts, 2s interval). A default `admin` account (`Admin123!`) is seeded if it does not exist.
 
-### 4. Run the frontend
+### 5. Run the frontend
 
 Serve `MatchmakingClient/` with any static file server. In VS Code, use the Live Server extension and open `index.html`.
 
 Swagger UI is available at `http://localhost:{port}/swagger` in Development mode.
 
-### 5. Run tests
+### 6. Run tests
 
 ```bash
 dotnet test MatchmakingEngine.Tests/MatchmakingEngine.Tests.csproj

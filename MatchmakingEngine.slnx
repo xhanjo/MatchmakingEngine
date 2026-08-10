@@ -6,5 +6,5 @@
   <Project Path="MatchmakingEngine.Domain/MatchmakingEngine.Domain.csproj" Id="998e6e2d-df39-46f4-b474-1c47979eac86" />
   <Project Path="MatchmakingEngine.Infrastructure/MatchmakingEngine.Infrastructure.csproj" Id="9aad7cc5-f139-4ec7-8e04-e0dfd6450075" />
   <Project Path="MatchmakingEngine/MatchmakingEngine.csproj" />
-  <Project Path="MatchmakingEngine/MatchmakingEngine.Tests/MatchmakingEngine.Tests.csproj" />
+  <Project Path="MatchmakingEngine.Tests/MatchmakingEngine.Tests.csproj" />
 </Solution>

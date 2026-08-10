@@ -71,7 +71,7 @@ const Api = {
     vetoMap: (matchId, mapName) => Api.request(`/Matchmaking/veto/${matchId}/${mapName}`, { method: 'POST' }),
 
     // Party
-    createParty: () => Api.request('/Party/create', { method: 'POST', body: JSON.stringify(2) }), // ALWAYS DUO (2)
+    createParty: () => Api.request('/Party/create', { method: 'POST', body: JSON.stringify(2) }),
     inviteToParty: (friendId) => Api.request(`/Party/invite/${friendId}`, { method: 'POST' }),
     joinParty: (partyId) => Api.request(`/Party/join/${partyId}`, { method: 'POST' }),
     leaveParty: () => Api.request('/Party/leave', { method: 'POST' }),

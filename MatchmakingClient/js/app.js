@@ -667,11 +667,9 @@ const App = {
 
             // MatchStatus enum: Pending=0, Accepted=1, Canceled=2, Finished=3
             // The endpoint already filters to Finished only, but handle edge cases
-            console.log('History data:', history, 'UserId:', userId);
             const finishedMatches = (history || []).filter(m =>
                 m.status === 'Finished' || m.status === 6
             ).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-            console.log('Finished matches:', finishedMatches);
 
             if (finishedMatches.length === 0) {
                 historyContainer.innerHTML = '<p style="color:#334155; font-size:0.8rem;">No completed matches yet.</p>';
@@ -681,7 +679,6 @@ const App = {
                         const pid = p.playerId || p.PlayerId;
                         return pid && pid.toLowerCase() === userId.toLowerCase();
                     });
-                    console.log('Match:', match.id, 'Players:', match.players, 'MyStats:', myStats);
                     if (!myStats) return '';
 
                     const modeText = (match.gameMode === 1 || match.gameMode === 'Solo') ? 'Solo' : 'Duo';
@@ -901,7 +898,6 @@ const App = {
 
     // ─── MAP VETO ─────────────────────────────────────────────────────
     onMatchReadyForVeto(vetoState) {
-        console.log('Veto ready!', vetoState);
         this.closeMatchModal();
         this.state.status = 'Veto';
         this.state.currentMatchId = vetoState.matchId;
@@ -942,7 +938,6 @@ const App = {
     },
 
     onMapVetoUpdated(vetoState) {
-        console.log('Map Veto Updated!', vetoState);
         
         // Capture the previous turn team before updating state
         const previousTurnTeam = this.state.vetoState ? this.state.vetoState.currentTurnTeam : 1;
@@ -978,7 +973,6 @@ const App = {
     },
 
     onMatchStarting(matchId) {
-        console.log('Match Starting:', matchId);
         if (window.location.hash === '#match-room') {
             document.getElementById('veto-status-text').innerText = 'Server Starting...';
             document.getElementById('veto-status-text').style.color = '#10b981';

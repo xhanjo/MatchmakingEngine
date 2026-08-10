@@ -47,6 +47,11 @@ public class BanMapCommandHandler : IRequestHandler<BanMapCommand, BanMapResult>
         match.AvailableMaps.Remove(request.MapName);
         match.BannedMaps.Add(request.MapName);
 
+        if (!string.IsNullOrEmpty(match.CurrentVetoJobId))
+        {
+            _backgroundJobClient.Delete(match.CurrentVetoJobId);
+        }
+
         _logger.LogInformation("[MAP VETO] Player {PlayerId} banned map {MapName}. Maps left: {Count}",
             request.PlayerId, request.MapName, match.AvailableMaps.Count);
 
@@ -56,6 +61,7 @@ public class BanMapCommandHandler : IRequestHandler<BanMapCommand, BanMapResult>
             match.SelectedMap = match.AvailableMaps[0];
             match.CurrentVetoTurnPlayerId = null;
             match.VetoDeadLine = null;
+            match.ClearVetoJobId();
 
             _logger.LogInformation("[MAP VETO FINISHED] Chosen map: {MapName}. Starting server...",
                 match.AvailableMaps[0]);
@@ -69,9 +75,11 @@ public class BanMapCommandHandler : IRequestHandler<BanMapCommand, BanMapResult>
             match.VetoDeadLine = DateTimeOffset.UtcNow.AddSeconds(30);
 
             // Schedule auto-ban for the next player's turn (fixes AFK timeout)
-            _backgroundJobClient.Schedule<IMediator>(
-                m => m.Publish(new MapVetoTimeoutEvent(match.Id), CancellationToken.None),
+            var jobId = _backgroundJobClient.Schedule<IMediator>(
+                m => m.Publish(new MapVetoTimeoutEvent(match.Id, match.CurrentVetoTurnPlayerId.Value), CancellationToken.None),
                 TimeSpan.FromSeconds(30));
+                
+            match.AssignVetoJobId(jobId);
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);

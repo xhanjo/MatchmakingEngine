@@ -61,9 +61,12 @@ public class AcceptMatchCommandHandler : IRequestHandler<AcceptMatchCommand, Acc
             match.VetoDeadLine = DateTimeOffset.UtcNow.AddSeconds(30);
 
             _logger.LogInformation("[GAME START] All players accepted! Match {MatchId}  entering Map Veto phase. First turn: {PlayerId}", match.Id, match.CurrentVetoTurnPlayerId);
-            _backgroundJobClient.Schedule<IMediator>(
-                m => m.Publish(new MapVetoTimeoutEvent(match.Id), CancellationToken.None),
+            var jobId = _backgroundJobClient.Schedule<IMediator>(
+                m => m.Publish(new MapVetoTimeoutEvent(match.Id, match.CurrentVetoTurnPlayerId.Value), CancellationToken.None),
                 TimeSpan.FromSeconds(30));
+            
+            match.AssignVetoJobId(jobId);
+            
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
 

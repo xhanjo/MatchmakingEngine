@@ -56,6 +56,11 @@ public class AcceptMatchCommandHandlerTests
         _matchRepositoryMock.Setup(repo => repo.GetByIdWithPlayersAsync(matchId, It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(match);
 
+        _backgroundJobClientMock.Setup(x => x.Create(
+            It.IsAny<Hangfire.Common.Job>(),
+            It.IsAny<Hangfire.States.IState>()))
+            .Returns("test-job-id");
+
         var command = new AcceptMatchCommand(player1Id, matchId);
 
         var result = await _handler.Handle(command, CancellationToken.None);

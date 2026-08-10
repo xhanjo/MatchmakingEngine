@@ -18,4 +18,19 @@ public record Match(
     public DateTimeOffset? VetoDeadLine { get; set; }
     [Timestamp]
     public uint Version { get; set; }
+
+    public string? CurrentVetoJobId { get; private set; }
+
+    public void AssignVetoJobId(string jobId)
+    {
+        if (string.IsNullOrWhiteSpace(jobId))
+            throw new ArgumentException("Job ID cannot be empty", nameof(jobId));
+            
+        CurrentVetoJobId = jobId;
+    }
+
+    public void ClearVetoJobId()
+    {
+        CurrentVetoJobId = null;
+    }
 }

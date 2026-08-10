@@ -1,4 +1,4 @@
-﻿using MatchmakingEngine.Application.Application.Commands.Matchmaking;
+using MatchmakingEngine.Application.Application.Commands.Matchmaking;
 using MatchmakingEngine.Application.Interfaces.Repositories;
 using MatchmakingEngine.Hubs;
 using MediatR;
@@ -23,6 +23,8 @@ public class MapVetoTimeoutEventHandler : INotificationHandler<MapVetoTimeoutEve
     {
         var match = await _matchRepo.GetByIdWithPlayersAsync(notification.MatchId, trackChanges: false, cancellationToken);
         if (match == null || match.Status != MatchmakingEngine.Domain.MatchStatus.MapVeto) return;
+
+        if (match.CurrentVetoTurnPlayerId != notification.ExpectedTurnPlayerId) return;
 
         if (match.AvailableMaps.Any() && match.CurrentVetoTurnPlayerId.HasValue)
         {

@@ -1,10 +1,12 @@
 using FluentValidation;
 using MatchmakingEngine.Application.Configuration;
 using MatchmakingEngine.Application.Interfaces;
+using MatchmakingEngine.Application.Interfaces.Auth;
 using MatchmakingEngine.Application.Interfaces.Repositories;
 using MatchmakingEngine.Data;
 using MatchmakingEngine.HostedServices;
 using MatchmakingEngine.Hubs;
+using MatchmakingEngine.Infrastructure.Auth;
 using MatchmakingEngine.Infrastructure.Repositories;
 using MatchmakingEngine.Infrastructure.Services;
 using MatchmakingEngine.Services;
@@ -18,6 +20,7 @@ using System.Text;
 using System.Threading.RateLimiting;
 using Hangfire;
 using Hangfire.PostgreSql;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -50,6 +53,8 @@ builder.Services.AddScoped<IMatchRepository, MatchRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IFriendshipRepository, FriendshipRepository>();
 builder.Services.AddScoped<IPartyRepository, PartyRepository>();
+builder.Services.AddScoped<IJwtProvider, JwtProvider>();
+builder.Services.AddScoped<IBackgroundJobService, HangfireJobService>();
 builder.Services.AddSingleton<MatchmakingEngine.Application.Interfaces.ILeaderboardService, MatchmakingEngine.Infrastructure.Services.LeaderboardService>();
 
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? throw new InvalidOperationException("JWT:Issuer is missing in configuration.");

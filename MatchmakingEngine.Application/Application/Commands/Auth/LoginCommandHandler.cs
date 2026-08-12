@@ -1,24 +1,21 @@
-using BCrypt.Net;
-using MatchmakingEngine.Application.Configuration;
+using MatchmakingEngine.Application.Interfaces.Auth;
 using MatchmakingEngine.Application.Interfaces.Repositories;
 using MediatR;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace MatchmakingEngine.Application.Commands.Auth;
 
 public class LoginCommandHandler : IRequestHandler<LoginCommand, string>
 {
     private readonly IPlayerRepository _playerRepository;
-    private readonly JwtSettings _jwtSettings;
+    private readonly IJwtProvider _jwtProvider;
 
-    public LoginCommandHandler(IPlayerRepository playerRepository, IOptions<JwtSettings> jwtOptions)
+    public LoginCommandHandler(IPlayerRepository playerRepository, IJwtProvider jwtProvider)
     {
         _playerRepository = playerRepository;
-        _jwtSettings = jwtOptions.Value;
+        _jwtProvider = jwtProvider;
     }
 
     public async Task<string> Handle(LoginCommand request, CancellationToken cancellationToken)
@@ -28,25 +25,6 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, string>
         if (player == null || !BCrypt.Net.BCrypt.Verify(request.Password, player.PasswordHash))
             throw new UnauthorizedAccessException("Invalid credentials");
 
-        var claims = new[]
-        {
-            new Claim(ClaimTypes.NameIdentifier, player.Id.ToString()),
-            new Claim("PlayerId", player.Id.ToString()),
-            new Claim(ClaimTypes.Name, player.Username),
-            new Claim(ClaimTypes.Role, player.Role.ToString())
-        };
-
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Key!));
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-        var token = new JwtSecurityToken(
-            issuer: _jwtSettings.Issuer,
-            audience: _jwtSettings.Audience,
-            claims: claims,
-            expires: DateTime.UtcNow.AddHours(2),
-            signingCredentials: creds
-            );
-
-        return new JwtSecurityTokenHandler().WriteToken(token);
+        return _jwtProvider.GenerateToken(player);
     }
 }

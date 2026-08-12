@@ -1,8 +1,10 @@
 using Hangfire;
 using MatchmakingEngine.Application.Commands.Matchmaking;
+using MatchmakingEngine.Application.Interfaces;
 using MatchmakingEngine.Application.Interfaces.Repositories;
 using MatchmakingEngine.Domain;
 using MatchmakingEngine.Domain.Exceptions;
+using MediatR;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System;
@@ -20,20 +22,20 @@ public class AcceptMatchCommandHandlerTests
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<ILogger<AcceptMatchCommandHandler>> _loggerMock;
     private readonly AcceptMatchCommandHandler _handler;
-    private readonly Mock<IBackgroundJobClient> _backgroundJobClientMock;
+    private readonly Mock<IBackgroundJobService> _backgroundJobServiceMock;
 
     public AcceptMatchCommandHandlerTests()
     {
         _matchRepositoryMock = new Mock<IMatchRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _loggerMock = new Mock<ILogger<AcceptMatchCommandHandler>>();
-        _backgroundJobClientMock = new Mock<IBackgroundJobClient>();
+        _backgroundJobServiceMock = new Mock<IBackgroundJobService>();
 
         _handler = new AcceptMatchCommandHandler(
            _matchRepositoryMock.Object,
            _unitOfWorkMock.Object,
            _loggerMock.Object,
-           _backgroundJobClientMock.Object);
+           _backgroundJobServiceMock.Object);
     }
 
     [Fact]
@@ -56,9 +58,9 @@ public class AcceptMatchCommandHandlerTests
         _matchRepositoryMock.Setup(repo => repo.GetByIdWithPlayersAsync(matchId, It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(match);
 
-        _backgroundJobClientMock.Setup(x => x.Create(
-            It.IsAny<Hangfire.Common.Job>(),
-            It.IsAny<Hangfire.States.IState>()))
+        _backgroundJobServiceMock.Setup(x => x.Schedule<IMediator>(
+            It.IsAny<System.Linq.Expressions.Expression<System.Action<IMediator>>>(),
+            It.IsAny<TimeSpan>()))
             .Returns("test-job-id");
 
         var command = new AcceptMatchCommand(player1Id, matchId);

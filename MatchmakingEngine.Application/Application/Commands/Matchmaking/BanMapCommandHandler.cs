@@ -16,7 +16,7 @@ public class BanMapCommandHandler : IRequestHandler<BanMapCommand, BanMapResult>
     private readonly IMatchRepository _matchRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<BanMapCommandHandler> _logger;
-    private readonly IBackgroundJobService _backgroundJobService
+    private readonly IBackgroundJobService _backgroundJobService;
     public BanMapCommandHandler(IMatchRepository matchRepository, IUnitOfWork unitOfWork, ILogger<BanMapCommandHandler> logger, IBackgroundJobService backgroundJobService)
     {
         _matchRepository = matchRepository;
@@ -75,7 +75,7 @@ public class BanMapCommandHandler : IRequestHandler<BanMapCommand, BanMapResult>
             match.VetoDeadLine = DateTimeOffset.UtcNow.AddSeconds(30);
 
             var jobId = _backgroundJobService.Schedule<IMediator>(
-                m => m.Publish(new MapVetoTimeoutEvent(match.Id, match.CurrentVetoTurnPlayerId.Value), CancellationToken.None),
+                m => m.Publish(new MapVetoTimeoutEvent(match.Id, match.CurrentVetoTurnPlayerId!.Value), CancellationToken.None),
                 TimeSpan.FromSeconds(30));
                 
             match.AssignVetoJobId(jobId);

@@ -1,5 +1,7 @@
 ﻿using MatchmakingEngine.Application.Commands.Auth;
 using MatchmakingEngine.Application.Configuration;
+using MatchmakingEngine.Application.Interfaces;
+using MatchmakingEngine.Application.Interfaces.Auth;
 using MatchmakingEngine.Application.Interfaces.Repositories;
 using MatchmakingEngine.Domain;
 using Microsoft.Extensions.Options;
@@ -11,21 +13,16 @@ namespace MatchmakingEngine.Tests.Application.Commands.Auth;
 public class LoginCommandHandlerTests
 {
     private readonly Mock<IPlayerRepository> _playerRepoMock;
-    private readonly IOptions<JwtSettings> _jwtSettings;
+    private readonly Mock<IJwtProvider> _jwtProviderMock;
     private readonly LoginCommandHandler _handler;
 
     public LoginCommandHandlerTests()
     {
         _playerRepoMock = new Mock<IPlayerRepository>();
 
-        _jwtSettings = Options.Create(new JwtSettings
-        {
-            Key = "supers-secret-test-key-32-chars-minimum",
-            Issuer = "TestIssuer",
-            Audience = "TestAudience"
-        });
+        _jwtProviderMock = new Mock<IJwtProvider>();
 
-        _handler = new LoginCommandHandler(_playerRepoMock.Object, _jwtSettings);
+        _handler = new LoginCommandHandler(_playerRepoMock.Object, _jwtProviderMock.Object);
     }
 
     [Fact]
@@ -36,6 +33,8 @@ public class LoginCommandHandlerTests
         var player = new Player { Id = Guid.NewGuid(), Username = "TestUser", PasswordHash = hash };
 
         _playerRepoMock.Setup(x => x.GetByUsernameAsync("TestUser", false)).ReturnsAsync(player);
+
+        _jwtProviderMock.Setup(x => x.GenerateToken(It.IsAny<Player>())).Returns("fake-jwt-token-string");
 
         var command = new LoginCommand("TestUser", password);
 

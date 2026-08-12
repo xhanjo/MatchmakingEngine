@@ -1,12 +1,13 @@
 using Hangfire;
+using MatchmakingEngine.Application.DTO;
+using MatchmakingEngine.Application.Interfaces;
 using MatchmakingEngine.Application.Interfaces.Repositories;
-using MediatR;
 using MatchmakingEngine.Domain.Exceptions;
+using MediatR;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Text;
-using MatchmakingEngine.Application.DTO;
 
 namespace MatchmakingEngine.Application.Application.Commands.Matchmaking;
 
@@ -15,14 +16,13 @@ public class BanMapCommandHandler : IRequestHandler<BanMapCommand, BanMapResult>
     private readonly IMatchRepository _matchRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<BanMapCommandHandler> _logger;
-    private readonly IBackgroundJobClient _backgroundJobClient;
-
-    public BanMapCommandHandler(IMatchRepository matchRepository, IUnitOfWork unitOfWork, ILogger<BanMapCommandHandler> logger, IBackgroundJobClient backgroundJobClient)
+    private readonly IBackgroundJobService _backgroundJobService
+    public BanMapCommandHandler(IMatchRepository matchRepository, IUnitOfWork unitOfWork, ILogger<BanMapCommandHandler> logger, IBackgroundJobService backgroundJobService)
     {
         _matchRepository = matchRepository;
         _unitOfWork = unitOfWork;
         _logger = logger;
-        _backgroundJobClient = backgroundJobClient;
+        _backgroundJobService = backgroundJobService;
     }
 
     public async Task<BanMapResult> Handle(BanMapCommand request, CancellationToken cancellationToken)
@@ -49,7 +49,7 @@ public class BanMapCommandHandler : IRequestHandler<BanMapCommand, BanMapResult>
 
         if (!string.IsNullOrEmpty(match.CurrentVetoJobId))
         {
-            _backgroundJobClient.Delete(match.CurrentVetoJobId);
+            _backgroundJobService.Delete(match.CurrentVetoJobId);
         }
 
         _logger.LogInformation("[MAP VETO] Player {PlayerId} banned map {MapName}. Maps left: {Count}",
@@ -74,8 +74,7 @@ public class BanMapCommandHandler : IRequestHandler<BanMapCommand, BanMapResult>
             match.CurrentVetoTurnPlayerId = (request.PlayerId == team1Captain) ? team2Captain : team1Captain;
             match.VetoDeadLine = DateTimeOffset.UtcNow.AddSeconds(30);
 
-            // Schedule auto-ban for the next player's turn (fixes AFK timeout)
-            var jobId = _backgroundJobClient.Schedule<IMediator>(
+            var jobId = _backgroundJobService.Schedule<IMediator>(
                 m => m.Publish(new MapVetoTimeoutEvent(match.Id, match.CurrentVetoTurnPlayerId.Value), CancellationToken.None),
                 TimeSpan.FromSeconds(30));
                 

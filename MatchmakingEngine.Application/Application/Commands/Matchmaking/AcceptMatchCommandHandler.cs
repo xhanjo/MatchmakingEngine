@@ -1,5 +1,5 @@
-using Hangfire;
 using MatchmakingEngine.Application.Application.Commands.Matchmaking;
+using MatchmakingEngine.Application.Interfaces;
 using MatchmakingEngine.Application.Interfaces.Repositories;
 using MatchmakingEngine.Domain;
 using MatchmakingEngine.Domain.Exceptions;
@@ -14,18 +14,18 @@ public class AcceptMatchCommandHandler : IRequestHandler<AcceptMatchCommand, Acc
     private readonly IMatchRepository _matchRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<AcceptMatchCommandHandler> _logger;
-    private readonly IBackgroundJobClient _backgroundJobClient;
+    private readonly IBackgroundJobService _backgroundJobService;
 
     public AcceptMatchCommandHandler(
         IMatchRepository matchRepository,
         IUnitOfWork unitOfWork,
         ILogger<AcceptMatchCommandHandler> logger,
-        IBackgroundJobClient backgroundJobClient)
+        IBackgroundJobService backgroundJobService)
     {
         _matchRepository = matchRepository;
         _unitOfWork = unitOfWork;
         _logger = logger;
-        _backgroundJobClient = backgroundJobClient;
+        _backgroundJobService = backgroundJobService;
     }
 
     public async Task<AcceptMatchResult> Handle(AcceptMatchCommand request, CancellationToken cancellationToken)
@@ -61,7 +61,7 @@ public class AcceptMatchCommandHandler : IRequestHandler<AcceptMatchCommand, Acc
             match.VetoDeadLine = DateTimeOffset.UtcNow.AddSeconds(30);
 
             _logger.LogInformation("[GAME START] All players accepted! Match {MatchId}  entering Map Veto phase. First turn: {PlayerId}", match.Id, match.CurrentVetoTurnPlayerId);
-            var jobId = _backgroundJobClient.Schedule<IMediator>(
+            var jobId = _backgroundJobService.Schedule<IMediator>(
                 m => m.Publish(new MapVetoTimeoutEvent(match.Id, match.CurrentVetoTurnPlayerId.Value), CancellationToken.None),
                 TimeSpan.FromSeconds(30));
             

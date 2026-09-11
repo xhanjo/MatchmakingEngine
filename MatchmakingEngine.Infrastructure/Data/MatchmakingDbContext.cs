@@ -1,8 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
-using MatchmakingEngine.Domain;
-using MatchmakingEngine.Application.Interfaces;
+﻿using MatchmakingEngine.Domain;
+using Microsoft.EntityFrameworkCore;
 
-namespace MatchmakingEngine.Data;
+namespace MatchmakingEngine.Infrastructure.Data;
 
 public class MatchmakingDbContext : DbContext
 {
@@ -12,6 +11,7 @@ public class MatchmakingDbContext : DbContext
     public DbSet<Friendship> Friendships { get; set; }
     public DbSet<Party> Parties { get; set; }
     public DbSet<PartyMember> PartyMembers { get; set; }
+    public DbSet<RefreshToken>  RefreshTokens { get; set; }
 
     public MatchmakingDbContext(DbContextOptions<MatchmakingDbContext> options) : base(options) { }
 
@@ -104,5 +104,14 @@ public class MatchmakingDbContext : DbContext
             .WithMany(p => p.PartyMemberships)
             .HasForeignKey(pm => pm.PlayerId)
             .OnDelete(DeleteBehavior.Restrict);
+        
+        // ===== RefreshToken =====
+        modelBuilder.Entity<RefreshToken>()
+            .HasOne(rt => rt.Player)
+            .WithMany(p => p.RefreshTokens)
+            .HasForeignKey(rt => rt.PlayerId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+
     }
 }

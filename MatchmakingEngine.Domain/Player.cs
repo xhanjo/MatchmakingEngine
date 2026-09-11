@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.Runtime.CompilerServices;
 using MatchmakingEngine.Domain.Common;
 using MatchmakingEngine.Domain.Events;
 
@@ -30,18 +29,20 @@ public class Player : Entity
     public PlayerRegion Region { get; set; } = PlayerRegion.EuWest;
 
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
-
-    public void RecordWin(int MmrChange)
+    
+    public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
+    
+    public void RecordWin(int mmrChange)
     {
         int oldMmr = Mmr;
-        Mmr += MmrChange;
+        Mmr += mmrChange;
 
         AddDomainEvents(new PlayerMmrChangedEvent(Id, oldMmr, Mmr));
     }
-    public void RecordLoss(int MmrChange)
+    public void RecordLoss(int mmrChange)
     {
         int oldMmr = Mmr;
-        Mmr = Math.Max(0, Mmr - MmrChange);
+        Mmr = Math.Max(0, Mmr - mmrChange);
 
         AddDomainEvents(new PlayerMmrChangedEvent(Id, oldMmr, Mmr));
     }

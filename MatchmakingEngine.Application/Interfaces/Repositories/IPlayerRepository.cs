@@ -9,5 +9,6 @@ public interface IPlayerRepository
     Task<IEnumerable<Player>> GetAllAsync(bool trackChanges = false, CancellationToken cancellationToken = default);
     Task<IEnumerable<Player>> GetByIdsAsync(IEnumerable<Guid> ids, bool trackChanges = false, CancellationToken cancellationToken = default);
     Task AddAsync(Player player, CancellationToken cancellationToken = default);
+    Task<Player?> GetByRefreshTokenAsync(string refreshToken, CancellationToken cancellationToken = default);
     void Update(Player player);
 }

@@ -1,5 +1,4 @@
-﻿using MatchmakingEngine.Application.Interfaces;
-using MatchmakingEngine.Application.Interfaces.Repositories;
+﻿using MatchmakingEngine.Application.Interfaces.Repositories;
 using MatchmakingEngine.Domain;
 using MatchmakingEngine.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -41,6 +40,13 @@ public class PlayerRepository : IPlayerRepository
     public async Task AddAsync(Player player, CancellationToken cancellationToken = default)
     {
         await _context.Players.AddAsync(player, cancellationToken);
+    }
+
+    public async Task<Player?> GetByRefreshTokenAsync(string refreshToken, CancellationToken cancellationToken = default)
+    {
+        return await _context.Players
+            .Include(p => p.RefreshTokens)
+            .FirstOrDefaultAsync(p => p.RefreshTokens.Any(rt => rt.Token == refreshToken), cancellationToken);
     }
 
     public void Update(Player player)

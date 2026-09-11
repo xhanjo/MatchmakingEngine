@@ -15,14 +15,14 @@ public class LoginCommandHandlerTests
     private readonly Mock<IPlayerRepository> _playerRepoMock;
     private readonly Mock<IJwtProvider> _jwtProviderMock;
     private readonly LoginCommandHandler _handler;
+    private readonly Mock<IUnitOfWork> _unitOfWorkMock; 
 
     public LoginCommandHandlerTests()
     {
         _playerRepoMock = new Mock<IPlayerRepository>();
-
         _jwtProviderMock = new Mock<IJwtProvider>();
-
-        _handler = new LoginCommandHandler(_playerRepoMock.Object, _jwtProviderMock.Object);
+        _unitOfWorkMock = new Mock<IUnitOfWork>();
+        _handler = new LoginCommandHandler(_playerRepoMock.Object, _jwtProviderMock.Object, _unitOfWorkMock.Object);
     }
 
     [Fact]
@@ -32,16 +32,21 @@ public class LoginCommandHandlerTests
         var hash = BCrypt.Net.BCrypt.HashPassword(password);
         var player = new Player { Id = Guid.NewGuid(), Username = "TestUser", PasswordHash = hash };
 
-        _playerRepoMock.Setup(x => x.GetByUsernameAsync("TestUser", false)).ReturnsAsync(player);
+        _playerRepoMock.Setup(x => x.GetByUsernameAsync("TestUser", It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(player);
+        _jwtProviderMock.Setup(x => x.GenerateToken(It.IsAny<Player>())).Returns("fake-access-token");
 
-        _jwtProviderMock.Setup(x => x.GenerateToken(It.IsAny<Player>())).Returns("fake-jwt-token-string");
-
+        _jwtProviderMock.Setup(x => x.GenerateRefreshToken()).Returns("fake-refresh-token");
+        
         var command = new LoginCommand("TestUser", password);
 
         var result = await _handler.Handle(command, CancellationToken.None);
 
         Assert.NotNull(result);
-        Assert.False(string.IsNullOrWhiteSpace(result));
+        Assert.Equal("fake-access-token", result.AccessToken);
+        Assert.Equal("fake-refresh-token", result.RefreshToken);
+        
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

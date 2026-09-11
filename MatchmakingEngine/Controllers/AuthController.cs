@@ -16,29 +16,55 @@ public class AuthController : ControllerBase
 
     public AuthController(IMediator mediator)
     {
-        _mediator = mediator;        
+        _mediator = mediator;
     }
 
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         var command = new LoginCommand(request.Username, request.Password);
-        var token = await _mediator.Send(command);
+        var authResult = await _mediator.Send(command);
+        
+        SetRefreshTokenCookie(authResult.RefreshToken);
+        
+        return Ok(new LoginResponseDto(authResult.AccessToken));
+    }
 
-        Response.Cookies.Append("jwt", token, new CookieOptions
+    [HttpPost("refresh")]
+    public async Task<IActionResult> Refresh()
+    {
+        if (!Request.Cookies.TryGetValue("refresh-token", out var refreshToken))
         {
-            HttpOnly = true,
-            SameSite = SameSiteMode.Lax,
-            Expires = DateTime.UtcNow.AddHours(2)
-        });
-
-        return Ok(new LoginResponseDto(token));
+            return Unauthorized("Refresh token not found.");
+        }
+        
+        var command = new RefreshCommand(refreshToken);
+        var authResult = await _mediator.Send(command);
+        
+        SetRefreshTokenCookie(authResult.RefreshToken);
+        return Ok(new LoginResponseDto(authResult.AccessToken));
     }
 
     [HttpPost("logout")]
-    public IActionResult Logout()
+    public async Task<IActionResult> Logout()
     {
-        Response.Cookies.Delete("jwt");
+        if (Request.Cookies.TryGetValue("refresh-token", out var refreshToken))
+        {
+            await _mediator.Send(new LogoutCommand(refreshToken));
+        }
+        
+        Response.Cookies.Delete("refresh-token");
+
         return Ok();
+    }
+
+    private void SetRefreshTokenCookie(string refreshToken)
+    {
+        Response.Cookies.Append("refresh-token", refreshToken, new CookieOptions
+        {
+            HttpOnly = true,
+            SameSite = SameSiteMode.Lax,
+            Expires = DateTime.Now.AddDays(7)
+        });
     }
 }

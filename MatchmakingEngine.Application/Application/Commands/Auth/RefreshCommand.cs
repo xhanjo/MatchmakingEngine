@@ -3,4 +3,4 @@ using MediatR;
 
 namespace MatchmakingEngine.Application.Application.Commands.Auth;
 
-public record LoginCommand(string Username, string Password) : IRequest<AuthResult>;
+public record RefreshCommand(string RefreshToken) : IRequest<AuthResult>;

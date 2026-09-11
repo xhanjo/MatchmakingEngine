@@ -21,8 +21,8 @@ public class SendFriendRequestCommandHandler : IRequestHandler<SendFriendRequest
         if (request.SenderId == request.ReceiverId)
             throw new ConflictException("You cannot send a friend requests to yourself.");
 
-        var existingFriedship = await _friendshipRepository.GetBetweenPlayersAsync(request.SenderId, request.ReceiverId, cancellationToken);
-        if (existingFriedship != null)
+        var existingFriendship = await _friendshipRepository.GetBetweenPlayersAsync(request.SenderId, request.ReceiverId, cancellationToken);
+        if (existingFriendship != null)
             throw new ConflictException("A friendship or pending requests already exists between these players.");
 
         var friendship = new Friendship

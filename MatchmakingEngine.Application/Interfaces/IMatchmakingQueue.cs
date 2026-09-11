@@ -1,6 +1,6 @@
 ﻿using MatchmakingEngine.Domain;
 
-namespace MatchmakingEngine.Services;
+namespace MatchmakingEngine.Application.Interfaces;
 
 public interface IMatchmakingQueue
 {

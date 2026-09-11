@@ -1,7 +1,7 @@
-﻿using MatchmakingEngine.Domain;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
+using MatchmakingEngine.Domain;
 
-namespace MatchmakingEngine.DTO;
+namespace MatchmakingEngine.Application.DTO;
 
 public record RegisterPlayerRequest(
     [Required][MaxLength(50)] string Username,

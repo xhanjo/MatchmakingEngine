@@ -1,4 +1,4 @@
-﻿using MatchmakingEngine.Application.Commands.Auth;
+﻿using MatchmakingEngine.Application.Application.Commands.Auth;
 using MatchmakingEngine.Application.Configuration;
 using MatchmakingEngine.Application.Interfaces;
 using MatchmakingEngine.Application.Interfaces.Auth;

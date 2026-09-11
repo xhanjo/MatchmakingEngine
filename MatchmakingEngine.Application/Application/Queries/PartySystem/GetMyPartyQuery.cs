@@ -1,10 +1,6 @@
 ﻿using MatchmakingEngine.Application.DTO;
 using MatchmakingEngine.Application.Interfaces.Repositories;
-using MatchmakingEngine.Domain.Exceptions;
 using MediatR;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace MatchmakingEngine.Application.Application.Queries.PartySystem;
 

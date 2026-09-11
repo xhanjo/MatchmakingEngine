@@ -1,4 +1,4 @@
-﻿using MatchmakingEngine.Services;
+﻿using MatchmakingEngine.Application.Interfaces;
 using MediatR;
 
 namespace MatchmakingEngine.Application.Application.Commands.Matchmaking;

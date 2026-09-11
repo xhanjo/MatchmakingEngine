@@ -1,6 +1,6 @@
-﻿using MediatR;
-using MatchmakingEngine.DTO;
+﻿using MatchmakingEngine.Application.DTO;
+using MediatR;
 
-namespace MatchmakingEngine.Application.Queries.Matchmaking;
+namespace MatchmakingEngine.Application.Application.Queries.Matchmaking;
 
 public record GetStatusQuery(Guid PlayerId) : IRequest<PollingStatusResponseDto>;

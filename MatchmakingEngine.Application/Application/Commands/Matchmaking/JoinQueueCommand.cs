@@ -1,5 +1,5 @@
 ﻿using MediatR;
 
-namespace MatchmakingEngine.Application.Commands.Matchmaking;
+namespace MatchmakingEngine.Application.Application.Commands.Matchmaking;
 
 public record JoinQueueCommand(Guid PlayerId) : IRequest<bool>;

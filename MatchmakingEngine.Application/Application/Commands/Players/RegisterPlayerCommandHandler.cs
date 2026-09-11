@@ -1,12 +1,10 @@
-﻿using MediatR;
-using MatchmakingEngine.DTO;
-using MatchmakingEngine.Domain;
-using BCrypt.Net;
-using Microsoft.Extensions.Caching.Distributed;
+﻿using MatchmakingEngine.Application.DTO;
 using MatchmakingEngine.Application.Interfaces;
 using MatchmakingEngine.Application.Interfaces.Repositories;
+using MatchmakingEngine.Domain;
+using MediatR;
 
-namespace MatchmakingEngine.Application.Commands.Players;
+namespace MatchmakingEngine.Application.Application.Commands.Players;
 
 public class RegisterPlayerCommandHandler : IRequestHandler<RegisterPlayerCommand, PlayerResponseDto>
 {
@@ -28,7 +26,7 @@ public class RegisterPlayerCommandHandler : IRequestHandler<RegisterPlayerComman
 
     public async Task<PlayerResponseDto> Handle(RegisterPlayerCommand request, CancellationToken cancellationToken)
     {
-        var existingPlayer = await _playerRepository.GetByUsernameAsync(request.Username);
+        var existingPlayer = await _playerRepository.GetByUsernameAsync(request.Username, cancellationToken: cancellationToken);
         if (existingPlayer != null)
             throw new InvalidOperationException($"Username '{request.Username}' is already taken.");
 
@@ -40,7 +38,7 @@ public class RegisterPlayerCommandHandler : IRequestHandler<RegisterPlayerComman
             Role = PlayerRole.Player
         };
 
-        await _playerRepository.AddAsync(player);
+        await _playerRepository.AddAsync(player, cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

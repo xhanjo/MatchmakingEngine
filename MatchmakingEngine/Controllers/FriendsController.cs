@@ -14,9 +14,9 @@ namespace MatchmakingEngine.Controllers;
 public class FriendsController : ControllerBase
 {
     private readonly IMediator _mediator;
-    private readonly Microsoft.AspNetCore.SignalR.IHubContext<MatchmakingEngine.Hubs.MatchmakingHub> _hubContext;
+    private readonly IHubContext<Hubs.MatchmakingHub> _hubContext;
 
-    public FriendsController(IMediator mediator, Microsoft.AspNetCore.SignalR.IHubContext<MatchmakingEngine.Hubs.MatchmakingHub> hubContext)
+    public FriendsController(IMediator mediator, IHubContext<Hubs.MatchmakingHub> hubContext)
     {
         _mediator = mediator;
         _hubContext = hubContext;

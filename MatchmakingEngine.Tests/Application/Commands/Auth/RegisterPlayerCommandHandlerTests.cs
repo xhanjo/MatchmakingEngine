@@ -1,5 +1,5 @@
-﻿using Moq;
-using MatchmakingEngine.Application.Commands.Players;
+using MatchmakingEngine.Application.Application.Commands.Players;
+using Moq;
 using MatchmakingEngine.Application.Interfaces;
 using MatchmakingEngine.Application.Interfaces.Repositories;
 using MatchmakingEngine.Domain;
@@ -32,7 +32,7 @@ public class RegisterPlayerCommandHandlerTests
     [Fact]
     public async Task Handle_ValidRequest_CreatesPlayerAndInvalidatesCache()
     {
-        var command = new RegisterPlayerCommand("NewUser", "Password123", Domain.PlayerRegion.EuWest);
+        var command = new RegisterPlayerCommand("NewUser", "Password123", PlayerRegion.EuWest);
 
         _playerRepoMock
             .Setup(repo => repo.GetByUsernameAsync(command.Username, false))
@@ -53,7 +53,7 @@ public class RegisterPlayerCommandHandlerTests
     [Fact]
     public async Task Handle_ExistingUsername_ThrowsException()
     {
-        var command = new RegisterPlayerCommand("ExistingUser", "Password123", Domain.PlayerRegion.EuEast);
+        var command = new RegisterPlayerCommand("ExistingUser", "Password123", PlayerRegion.EuEast);
 
         _playerRepoMock
             .Setup(repo => repo.GetByUsernameAsync(command.Username, false))

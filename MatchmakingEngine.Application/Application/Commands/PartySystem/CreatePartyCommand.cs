@@ -40,12 +40,12 @@ public class CreatePartyCommandHandler : IRequestHandler<CreatePartyCommand, Par
             GameMode = request.GameMode
         };
 
-        var leaderMemder = new PartyMember
+        var leaderMember = new PartyMember
         {
             PartyId = party.Id,
             PlayerId = leader.Id
         };
-        party.Members.Add(leaderMemder);
+        party.Members.Add(leaderMember);
 
         await _partyRepository.AddAsync(party, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -55,7 +55,7 @@ public class CreatePartyCommandHandler : IRequestHandler<CreatePartyCommand, Par
             leader.Id,
             leader.Username,
             party.GameMode,
-            new List<PartyMembersDto> { new PartyMembersDto(leader.Id, leader.Username, leader.Mmr) }
+            [new PartyMembersDto(leader.Id, leader.Username, leader.Mmr)]
         );
     }
 }

@@ -2,7 +2,7 @@ using MatchmakingEngine.Domain.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
-namespace MatchmakingEngine.Services;
+namespace MatchmakingEngine.Middlewares;
 
 public class GlobalExceptionHandler : IExceptionHandler
 {

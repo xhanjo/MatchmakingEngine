@@ -20,7 +20,7 @@ public class MatchmakingHub : Hub
 
         if (!string.IsNullOrEmpty(playerIdString))
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId, playerIdString!);
+            await Groups.AddToGroupAsync(Context.ConnectionId, playerIdString);
 
             if (roleString == "Admin")
             {

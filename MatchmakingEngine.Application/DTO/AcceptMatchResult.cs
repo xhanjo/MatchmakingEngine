@@ -1,6 +1,6 @@
 using MatchmakingEngine.Domain;
 
-namespace MatchmakingEngine.DTO;
+namespace MatchmakingEngine.Application.DTO;
 
 public record AcceptMatchResult(
     string StatusMessage,

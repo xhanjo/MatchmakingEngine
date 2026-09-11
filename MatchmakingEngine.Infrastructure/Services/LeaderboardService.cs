@@ -3,15 +3,10 @@ using StackExchange.Redis;
 
 namespace MatchmakingEngine.Infrastructure.Services;
 
-public class LeaderboardService : ILeaderboardService
+public class LeaderboardService(IConnectionMultiplexer redisConnection) : ILeaderboardService
 {
-    private readonly IDatabase _redisDb;
+    private readonly IDatabase _redisDb = redisConnection.GetDatabase();
     private const string LeaderboardKey = "global_leaderboard";
-
-    public LeaderboardService(IConnectionMultiplexer redisConnection)
-    {
-        _redisDb = redisConnection.GetDatabase();
-    }
 
     public async Task UpdatePlayerMmrAsync(Guid playerId, int mmr)
     {

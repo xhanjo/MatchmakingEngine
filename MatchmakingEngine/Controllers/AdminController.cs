@@ -24,12 +24,12 @@ public class AdminController : ControllerBase
 
         var result = matches.Select(m => new
         {
-            Id = m.Id,
+            m.Id,
             Status = m.Status.ToString(),
-            AverageMmr = m.AverageMmr,
+            m.AverageMmr,
             GameMode = m.GameMode.ToString(),
-            CreatedAt = m.CreatedAt,
-            PlayerCount = m.Players?.Count ?? 0
+            m.CreatedAt,
+            PlayerCount = m.Players.Count
         });
 
         return Ok(result);
@@ -45,12 +45,12 @@ public class AdminController : ControllerBase
                                    m.Status == MatchStatus.StartingServer);
         var result = active.Select(m => new
         {
-            Id = m.Id,
+            m.Id,
             Status = m.Status.ToString(),
-            AverageMmr = m.AverageMmr,
+            m.AverageMmr,
             GameMode = m.GameMode.ToString(),
-            CreatedAt = m.CreatedAt,
-            PlayerCount = m.Players?.Count ?? 0
+            m.CreatedAt,
+            PlayerCount = m.Players.Count
         });
         return Ok(result);
     }

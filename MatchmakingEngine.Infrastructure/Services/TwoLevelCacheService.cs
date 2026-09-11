@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using MatchmakingEngine.Application.Interfaces;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
@@ -14,7 +14,7 @@ public class TwoLevelCacheService : ICacheService
         _memoryCache = memoryCache;
         _distributedCache = distributedCache;
     }
-    public async Task<T?> GetOrCreateAsync<T>(string key, Func<Task<T>> factory, TimeSpan? expirationTime = null) where T : class
+    public async Task<T?> GetOrCreateAsync<T>(string key, Func<Task<T?>> factory, TimeSpan? expirationTime = null) where T : class
     {
         if (_memoryCache.TryGetValue(key, out T? memoryValue))
             return memoryValue;
@@ -30,16 +30,14 @@ public class TwoLevelCacheService : ICacheService
 
         var freshValue = await factory();
 
-        if (freshValue != null)
-        {
-            var options = new DistributedCacheEntryOptions();
-            if (expirationTime.HasValue)
-                options.AbsoluteExpirationRelativeToNow = expirationTime.Value;
+        if (freshValue == null) return freshValue;
+        var options = new DistributedCacheEntryOptions();
+        if (expirationTime.HasValue)
+            options.AbsoluteExpirationRelativeToNow = expirationTime.Value;
 
-            await _distributedCache.SetStringAsync(key, JsonSerializer.Serialize(freshValue), options);
+        await _distributedCache.SetStringAsync(key, JsonSerializer.Serialize(freshValue), options);
 
-            SetMemoryCache(key, freshValue, expirationTime);
-        }
+        SetMemoryCache(key, freshValue, expirationTime);
         return freshValue;
     }
 

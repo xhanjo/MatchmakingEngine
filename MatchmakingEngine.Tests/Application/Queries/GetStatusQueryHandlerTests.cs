@@ -1,10 +1,10 @@
 using FluentAssertions;
-using MatchmakingEngine.Application.Queries.Matchmaking;
+using MatchmakingEngine.Application.Application.Queries.Matchmaking;
+using MatchmakingEngine.Application.Interfaces;
 using MatchmakingEngine.Application.Interfaces.Repositories;
 using MatchmakingEngine.Domain;
-using MatchmakingEngine.Services;
 using Moq;
-using Xunit;
+using Match = MatchmakingEngine.Domain.Match;
 
 namespace MatchmakingEngine.Tests.Application.Queries;
 
@@ -20,7 +20,7 @@ public class GetStatusQueryHandlerTests
         var playerId = Guid.NewGuid();
 
         _matchRepoMock.Setup(x => x.GetActiveMatchByPlayerIdAsync(playerId, true))
-            .ReturnsAsync((Domain.Match?)null);
+            .ReturnsAsync((Match?)null);
 
         _queueMock.Setup(q => q.IsPlayerInQueueAsync(playerId))
             .ReturnsAsync(true);
@@ -30,7 +30,7 @@ public class GetStatusQueryHandlerTests
 
         var result = await handler.Handle(query, CancellationToken.None);
 
-        result.Status.Should().Be(PollingStatus.Searching.ToString());
+        result.Status.Should().Be(nameof(PollingStatus.Searching));
     }
 
     [Fact]
@@ -39,7 +39,7 @@ public class GetStatusQueryHandlerTests
         var playerId = Guid.NewGuid();
 
         _matchRepoMock.Setup(x => x.GetActiveMatchByPlayerIdAsync(playerId, true))
-            .ReturnsAsync((Domain.Match?)null);
+            .ReturnsAsync((Match?)null);
 
         _queueMock.Setup(q => q.IsPlayerInQueueAsync(playerId))
             .ReturnsAsync(false);
@@ -52,6 +52,6 @@ public class GetStatusQueryHandlerTests
 
         var result = await handler.Handle(query, CancellationToken.None);
 
-        result.Status.Should().Be(PollingStatus.Idle.ToString());
+        result.Status.Should().Be(nameof(PollingStatus.Idle));
     }
 }

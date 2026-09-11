@@ -1,13 +1,12 @@
-using MatchmakingEngine.Application.Application.Commands.Matchmaking;
+using MatchmakingEngine.Application.DTO;
 using MatchmakingEngine.Application.Interfaces;
 using MatchmakingEngine.Application.Interfaces.Repositories;
 using MatchmakingEngine.Domain;
 using MatchmakingEngine.Domain.Exceptions;
-using MatchmakingEngine.DTO;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
-namespace MatchmakingEngine.Application.Commands.Matchmaking;
+namespace MatchmakingEngine.Application.Application.Commands.Matchmaking;
 
 public class AcceptMatchCommandHandler : IRequestHandler<AcceptMatchCommand, AcceptMatchResult>
 {
@@ -77,7 +76,7 @@ public class AcceptMatchCommandHandler : IRequestHandler<AcceptMatchCommand, Acc
             allAccepted,
             match.Status,
             freshMatch?.Players.Select(p => p.PlayerId).ToList() ?? new List<Guid>(),
-            match.Status == MatchStatus.MapVeto ? MatchmakingEngine.Application.DTO.VetoStateDto.FromMatch(match) : null
+            match.Status == MatchStatus.MapVeto ? DTO.VetoStateDto.FromMatch(match) : null
         );
     }
 }

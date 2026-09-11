@@ -1,13 +1,9 @@
-using Hangfire;
 using MatchmakingEngine.Application.DTO;
 using MatchmakingEngine.Application.Interfaces;
 using MatchmakingEngine.Application.Interfaces.Repositories;
 using MatchmakingEngine.Domain.Exceptions;
 using MediatR;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace MatchmakingEngine.Application.Application.Commands.Matchmaking;
 

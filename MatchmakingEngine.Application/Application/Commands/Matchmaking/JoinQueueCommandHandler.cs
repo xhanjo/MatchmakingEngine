@@ -1,7 +1,8 @@
-﻿using MatchmakingEngine.Application.Interfaces.Repositories;
+﻿using MatchmakingEngine.Application.Application.Commands.Matchmaking;
+using MatchmakingEngine.Application.Interfaces;
+using MatchmakingEngine.Application.Interfaces.Repositories;
 using MatchmakingEngine.Domain;
 using MatchmakingEngine.Domain.Exceptions;
-using MatchmakingEngine.Services;
 using MediatR;
 
 namespace MatchmakingEngine.Application.Commands.Matchmaking;

@@ -22,16 +22,16 @@ public class VetoStateDto
     public List<VetoPlayerDto> Team2 { get; set; } = new();
     public List<VetoMapDto> Maps { get; set; } = new();
 
-    public static VetoStateDto FromMatch(MatchmakingEngine.Domain.Match match)
+    public static VetoStateDto FromMatch(Domain.Match match)
     {
         var dto = new VetoStateDto
         {
             MatchId = match.Id,
-            Status = match.Status == MatchmakingEngine.Domain.MatchStatus.MapVeto ? "InProgress" : "Completed",
+            Status = match.Status == Domain.MatchStatus.MapVeto ? "InProgress" : "Completed",
             Team1 = match.Players.Where(p => p.Team == 1)
-                .Select(p => new VetoPlayerDto { PlayerId = p.PlayerId, Username = p.Player?.Username ?? "Unknown" }).ToList(),
+                .Select(p => new VetoPlayerDto { PlayerId = p.PlayerId, Username = p.Player.Username }).ToList(),
             Team2 = match.Players.Where(p => p.Team == 2)
-                .Select(p => new VetoPlayerDto { PlayerId = p.PlayerId, Username = p.Player?.Username ?? "Unknown" }).ToList(),
+                .Select(p => new VetoPlayerDto { PlayerId = p.PlayerId, Username = p.Player.Username }).ToList(),
         };
 
         if (match.CurrentVetoTurnPlayerId.HasValue)

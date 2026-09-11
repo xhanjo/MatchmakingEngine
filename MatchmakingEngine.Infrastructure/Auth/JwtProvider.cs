@@ -9,14 +9,9 @@ using System.Text;
 
 namespace MatchmakingEngine.Infrastructure.Auth;
 
-public class JwtProvider : IJwtProvider
+public class JwtProvider(IOptions<JwtSettings> jwtOptions) : IJwtProvider
 {
-    private readonly JwtSettings _jwtSettings;
-
-    public JwtProvider(IOptions<JwtSettings> jwtOptions)
-    {
-        _jwtSettings = jwtOptions.Value;
-    }
+    private readonly JwtSettings _jwtSettings = jwtOptions.Value;
 
     public string GenerateToken(Player player)
     {

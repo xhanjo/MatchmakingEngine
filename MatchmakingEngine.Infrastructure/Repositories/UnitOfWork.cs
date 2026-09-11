@@ -1,9 +1,9 @@
 ﻿using MediatR;
 using MatchmakingEngine.Application.Interfaces.Repositories;
-using MatchmakingEngine.Data;
 using MatchmakingEngine.Domain.Common;
 using Microsoft.EntityFrameworkCore;
 using MatchmakingEngine.Domain.Exceptions;
+using MatchmakingEngine.Infrastructure.Data;
 
 namespace MatchmakingEngine.Infrastructure.Repositories;
 

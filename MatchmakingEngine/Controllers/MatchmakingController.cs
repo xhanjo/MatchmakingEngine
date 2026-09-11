@@ -1,7 +1,6 @@
 using MatchmakingEngine.Application.Application.Commands.Matchmaking;
+using MatchmakingEngine.Application.Application.Queries.Matchmaking;
 using MatchmakingEngine.Application.Commands.Matchmaking;
-using MatchmakingEngine.Application.Queries.Matchmaking;
-using MatchmakingEngine.DTO;
 using MatchmakingEngine.Hubs;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;

@@ -1,4 +1,4 @@
-﻿using MatchmakingEngine.Data;
+﻿using MatchmakingEngine.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace MatchmakingEngine.Tests.Helpers;

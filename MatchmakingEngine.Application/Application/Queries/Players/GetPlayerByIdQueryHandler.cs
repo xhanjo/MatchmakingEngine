@@ -1,10 +1,9 @@
-﻿using MediatR;
-using MatchmakingEngine.DTO;
-using MatchmakingEngine.Domain.Exceptions;
-using MatchmakingEngine.Application.Interfaces;
+﻿using MatchmakingEngine.Application.DTO;
 using MatchmakingEngine.Application.Interfaces.Repositories;
+using MatchmakingEngine.Domain.Exceptions;
+using MediatR;
 
-namespace MatchmakingEngine.Application.Queries.Players;
+namespace MatchmakingEngine.Application.Application.Queries.Players;
 
 public class GetPlayerByIdQueryHandler : IRequestHandler<GetPlayerByIdQuery, PlayerResponseDto>
 {
@@ -17,7 +16,7 @@ public class GetPlayerByIdQueryHandler : IRequestHandler<GetPlayerByIdQuery, Pla
 
     public async Task<PlayerResponseDto> Handle(GetPlayerByIdQuery request, CancellationToken cancellationToken)
     {
-        var player = await _playerRepository.GetByIdAsync(request.Id, trackChanges: false);
+        var player = await _playerRepository.GetByIdAsync(request.Id, trackChanges: false, cancellationToken: cancellationToken);
 
         if (player == null)
             throw new NotFoundException($"Player with ID {request.Id} was not found");

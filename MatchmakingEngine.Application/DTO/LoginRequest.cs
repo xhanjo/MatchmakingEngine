@@ -1,3 +1,3 @@
-﻿namespace MatchmakingEngine.DTO;
+﻿namespace MatchmakingEngine.Application.DTO;
 
 public record LoginRequest(string Username, string Password);

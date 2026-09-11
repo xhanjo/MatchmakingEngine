@@ -3,15 +3,12 @@ using MatchmakingEngine.Application.Configuration;
 using MatchmakingEngine.Application.Interfaces;
 using MatchmakingEngine.Application.Interfaces.Auth;
 using MatchmakingEngine.Application.Interfaces.Repositories;
-using MatchmakingEngine.Data;
 using MatchmakingEngine.HostedServices;
 using MatchmakingEngine.Hubs;
 using MatchmakingEngine.Infrastructure.Auth;
 using MatchmakingEngine.Infrastructure.Repositories;
 using MatchmakingEngine.Infrastructure.Services;
-using MatchmakingEngine.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
@@ -20,11 +17,14 @@ using System.Text;
 using System.Threading.RateLimiting;
 using Hangfire;
 using Hangfire.PostgreSql;
+using MatchmakingEngine.Application.Application.Behaviors;
+using MatchmakingEngine.Infrastructure.Data;
+using MatchmakingEngine.Middlewares;
 
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Host.UseSerilog((context, loggerConfig) =>
+builder.Host.UseSerilog((_, loggerConfig) =>
 {
     loggerConfig
         .WriteTo.Console()
@@ -55,7 +55,7 @@ builder.Services.AddScoped<IFriendshipRepository, FriendshipRepository>();
 builder.Services.AddScoped<IPartyRepository, PartyRepository>();
 builder.Services.AddScoped<IJwtProvider, JwtProvider>();
 builder.Services.AddScoped<IBackgroundJobService, HangfireJobService>();
-builder.Services.AddSingleton<MatchmakingEngine.Application.Interfaces.ILeaderboardService, MatchmakingEngine.Infrastructure.Services.LeaderboardService>();
+builder.Services.AddSingleton<ILeaderboardService, LeaderboardService>();
 
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? throw new InvalidOperationException("JWT:Issuer is missing in configuration.");
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? throw new InvalidOperationException("JWT:Audience is missing in configuration.");
@@ -105,12 +105,12 @@ builder.Services.AddMediatR(cfg =>
 {
     cfg.RegisterServicesFromAssemblies(
         typeof(Program).Assembly,
-        typeof(MatchmakingEngine.Application.Behaviors.ValidationBehavior<,>).Assembly
+        typeof(ValidationBehavior<,>).Assembly
     );
-    cfg.AddOpenBehavior(typeof(MatchmakingEngine.Application.Behaviors.ValidationBehavior<,>));
+    cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
 });
 
-builder.Services.AddValidatorsFromAssembly(typeof(MatchmakingEngine.Application.Behaviors.ValidationBehavior<,>).Assembly);
+builder.Services.AddValidatorsFromAssembly(typeof(ValidationBehavior<,>).Assembly);
 
 var redisConfiguration = builder.Configuration["Redis:Configuration"]
     ?? throw new InvalidOperationException("Redis:Configuration is missing in appsettings.json.");
@@ -131,7 +131,7 @@ if (runWorker)
 {
     builder.Services.AddHostedService<MatchmakingWorker>();
     builder.Services.AddHostedService<MatchCleanupWorker>();
-    builder.Services.AddHostedService<MatchmakingEngine.HostedServices.LeaderboardSeederWorker>();
+    builder.Services.AddHostedService<LeaderboardSeederWorker>();
 }
 
 var dbConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
@@ -167,7 +167,7 @@ builder.Services.AddRateLimiter(options =>
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? httpContext.Request.Headers.Host.ToString(),
-            factory: partition => new FixedWindowRateLimiterOptions
+            factory: _ => new FixedWindowRateLimiterOptions
             {
                 AutoReplenishment = true,
                 PermitLimit = 30, 
@@ -211,7 +211,7 @@ app.MapHealthChecks("/health");
 
 using (var scope = app.Services.CreateScope())
 {
-    var context = scope.ServiceProvider.GetRequiredService<MatchmakingEngine.Data.MatchmakingDbContext>();
+    var context = scope.ServiceProvider.GetRequiredService<MatchmakingDbContext>();
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
     int retries = 5;
@@ -234,8 +234,8 @@ using (var scope = app.Services.CreateScope())
     }
 
 
-    var playerRepo = scope.ServiceProvider.GetRequiredService<MatchmakingEngine.Application.Interfaces.Repositories.IPlayerRepository>();
-    var unitOfWork = scope.ServiceProvider.GetRequiredService<MatchmakingEngine.Application.Interfaces.Repositories.IUnitOfWork>();
+    var playerRepo = scope.ServiceProvider.GetRequiredService<IPlayerRepository>();
+    var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
     var existingAdmin = await playerRepo.GetByUsernameAsync("admin");
     if (existingAdmin == null)
@@ -251,10 +251,10 @@ using (var scope = app.Services.CreateScope())
                 Mmr = 9999
             };
             await playerRepo.AddAsync(admin);
-            await unitOfWork.SaveChangesAsync(default);
+            await unitOfWork.SaveChangesAsync(CancellationToken.None);
             Console.WriteLine("SuperAdmin успішно створений!");
         }
-        catch (Microsoft.EntityFrameworkCore.DbUpdateException)
+        catch (DbUpdateException)
         {
             Console.WriteLine("SuperAdmin вже існує в БД.");
         }

@@ -1,6 +1,5 @@
-﻿using MediatR;
-using MatchmakingEngine.Domain;
-using MatchmakingEngine.DTO;
+﻿using MatchmakingEngine.Application.DTO;
+using MediatR;
 
-namespace MatchmakingEngine.Application.Commands.Matchmaking;
+namespace MatchmakingEngine.Application.Application.Commands.Matchmaking;
 public record AcceptMatchCommand(Guid PlayerId, Guid MatchId) : IRequest<AcceptMatchResult>;

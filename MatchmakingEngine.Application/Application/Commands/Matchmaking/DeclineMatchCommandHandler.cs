@@ -1,11 +1,9 @@
-using MatchmakingEngine.Application.Application.Commands.Matchmaking;
-using MatchmakingEngine.Application.Interfaces.Repositories;
 using MatchmakingEngine.Application.Interfaces;
+using MatchmakingEngine.Application.Interfaces.Repositories;
 using MatchmakingEngine.Domain;
 using MediatR;
-using System;
 
-namespace MatchmakingEngine.Application.Commands.Matchmaking;
+namespace MatchmakingEngine.Application.Application.Commands.Matchmaking;
 
 public class DeclineMatchCommandHandler : IRequestHandler<DeclineMatchCommand, List<Guid>>
 {

@@ -1,5 +1,5 @@
-﻿using MatchmakingEngine.Application.Commands.Auth;
-using MatchmakingEngine.DTO;
+﻿using MatchmakingEngine.Application.Application.Commands.Auth;
+using MatchmakingEngine.Application.DTO;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

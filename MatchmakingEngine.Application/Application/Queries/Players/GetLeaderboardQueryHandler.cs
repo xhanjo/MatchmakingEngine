@@ -20,10 +20,11 @@ public class GetLeaderboardQueryHandler : IRequestHandler<GetLeaderboardQuery, L
     {
         var topPlayers = await _leaderboardService.GetTopPlayersAsync(request.Count);
 
-        if (!topPlayers.Any())
+        var valueTuples = topPlayers.ToList();
+        if (!valueTuples.Any())
             return new List<LeaderboardEntryDto>();
 
-        var playerIds = topPlayers.Select(p => p.playerId).ToList();
+        var playerIds = valueTuples.Select(p => p.playerId).ToList();
 
         var playersFromDb = await _playerRepository.GetByIdsAsync(playerIds, trackChanges: false, cancellationToken);
 
@@ -32,11 +33,11 @@ public class GetLeaderboardQueryHandler : IRequestHandler<GetLeaderboardQuery, L
         var result = new List<LeaderboardEntryDto>();
         long currentRank = 1;
 
-        foreach (var p in topPlayers)
+        foreach (var p in valueTuples)
         {
             if (playerDict.TryGetValue(p.playerId, out var playerInfo))
             {
-                if (playerInfo.Role == MatchmakingEngine.Domain.PlayerRole.Admin)
+                if (playerInfo.Role == Domain.PlayerRole.Admin)
                     continue;
                 
                 result.Add(new LeaderboardEntryDto(

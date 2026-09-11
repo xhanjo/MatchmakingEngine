@@ -1,11 +1,10 @@
 ﻿using FluentAssertions;
+using MatchmakingEngine.Application.Application.Commands.Matchmaking;
 using MatchmakingEngine.Application.Commands.Matchmaking;
+using MatchmakingEngine.Application.Interfaces;
 using MatchmakingEngine.Application.Interfaces.Repositories;
 using MatchmakingEngine.Domain;
-using MatchmakingEngine.Services;
-using Microsoft.EntityFrameworkCore;
 using Moq;
-using Xunit;
 
 namespace MatchmakingEngine.Tests.Application.Commands;
 

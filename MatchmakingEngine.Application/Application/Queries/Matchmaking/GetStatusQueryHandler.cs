@@ -1,11 +1,10 @@
-using MediatR;
-using MatchmakingEngine.DTO;
-using MatchmakingEngine.Domain;
-using MatchmakingEngine.Services;
+using MatchmakingEngine.Application.DTO;
 using MatchmakingEngine.Application.Interfaces;
 using MatchmakingEngine.Application.Interfaces.Repositories;
+using MatchmakingEngine.Domain;
+using MediatR;
 
-namespace MatchmakingEngine.Application.Queries.Matchmaking;
+namespace MatchmakingEngine.Application.Application.Queries.Matchmaking;
 
 public class GetStatusQueryHandler : IRequestHandler<GetStatusQuery, PollingStatusResponseDto>
 {
@@ -22,25 +21,25 @@ public class GetStatusQueryHandler : IRequestHandler<GetStatusQuery, PollingStat
 
     public async Task<PollingStatusResponseDto> Handle(GetStatusQuery request, CancellationToken cancellationToken)
     {
-        var match = await _matchRepository.GetActiveMatchByPlayerIdAsync(request.PlayerId, trackChanges: true);
+        var match = await _matchRepository.GetActiveMatchByPlayerIdAsync(request.PlayerId, trackChanges: true, cancellationToken: cancellationToken);
     
         if (match != null)
         {
             string statusStr;
-            MatchmakingEngine.Application.DTO.VetoStateDto? vetoState = null;
+            DTO.VetoStateDto? vetoState = null;
 
             if (match.Status == MatchStatus.Pending)
             {
-                statusStr = PollingStatus.MatchFound.ToString();
+                statusStr = nameof(PollingStatus.MatchFound);
             }
             else if (match.Status == MatchStatus.MapVeto || match.Status == MatchStatus.StartingServer)
             {
                 statusStr = "MapVeto";
-                vetoState = MatchmakingEngine.Application.DTO.VetoStateDto.FromMatch(match);
+                vetoState = DTO.VetoStateDto.FromMatch(match);
             }
             else
             {
-                statusStr = PollingStatus.InGame.ToString();
+                statusStr = nameof(PollingStatus.InGame);
             }
 
             return new PollingStatusResponseDto(
@@ -54,7 +53,7 @@ public class GetStatusQueryHandler : IRequestHandler<GetStatusQuery, PollingStat
 
         if (await _queue.IsPlayerInQueueAsync(request.PlayerId))
         {
-            return new PollingStatusResponseDto(PollingStatus.Searching.ToString());
+            return new PollingStatusResponseDto(nameof(PollingStatus.Searching));
         }
 
         var party = await _partyRepository.GetPartyByPlayerIdAsync(request.PlayerId, trackChanges: false, cancellationToken);
@@ -62,12 +61,12 @@ public class GetStatusQueryHandler : IRequestHandler<GetStatusQuery, PollingStat
         {
             if (await _queue.IsPlayerInQueueAsync(party.LeaderId))
             {
-                return new PollingStatusResponseDto(PollingStatus.Searching.ToString());
+                return new PollingStatusResponseDto(nameof(PollingStatus.Searching));
             }
         }
 
         return new PollingStatusResponseDto(
-            PollingStatus.Idle.ToString()
+            nameof(PollingStatus.Idle)
             );
     }
 }

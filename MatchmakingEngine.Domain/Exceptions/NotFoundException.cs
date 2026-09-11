@@ -1,9 +1,3 @@
 ﻿namespace MatchmakingEngine.Domain.Exceptions;
 
-public class NotFoundException : DomainException
-{
-    public NotFoundException(string message) : base(message)
-    {
-        
-    }
-}
+public class NotFoundException(string message) : DomainException(message);

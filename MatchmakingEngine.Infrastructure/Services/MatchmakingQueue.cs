@@ -1,19 +1,14 @@
 ﻿using MatchmakingEngine.Domain;
-using MatchmakingEngine.Services;
 using StackExchange.Redis;
 using System.Text.Json;
+using MatchmakingEngine.Application.Interfaces;
 
 namespace MatchmakingEngine.Infrastructure.Services;
 
-public class MatchmakingQueue : IMatchmakingQueue
+public class MatchmakingQueue(IConnectionMultiplexer redisConnection) : IMatchmakingQueue
 {
-    private readonly IDatabase _redisDb;
+    private readonly IDatabase _redisDb = redisConnection.GetDatabase();
     private const string ActivePlayersHashKey = "active_players";
-
-    public MatchmakingQueue(IConnectionMultiplexer redisConnection)
-    {
-        _redisDb = redisConnection.GetDatabase();
-    }
 
     private string GetEvaluationQueueKey(GameMode mode) => $"{{queue_{mode}}}:eval";
     private string GetProcessingQueueKey(GameMode mode) => $"{{queue_{mode}}}:proc";

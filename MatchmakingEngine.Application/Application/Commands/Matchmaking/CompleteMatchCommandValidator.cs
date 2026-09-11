@@ -1,6 +1,6 @@
 ﻿using FluentValidation;
 
-namespace MatchmakingEngine.Application.Commands.Matchmaking;
+namespace MatchmakingEngine.Application.Application.Commands.Matchmaking;
 
 public class CompleteMatchCommandValidator : AbstractValidator<CompleteMatchCommand>
 {

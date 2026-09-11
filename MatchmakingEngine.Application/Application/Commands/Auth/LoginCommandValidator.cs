@@ -1,6 +1,6 @@
 ﻿using FluentValidation;
 
-namespace MatchmakingEngine.Application.Commands.Auth;
+namespace MatchmakingEngine.Application.Application.Commands.Auth;
 
 public class LoginCommandValidator : AbstractValidator<LoginCommand>
 {

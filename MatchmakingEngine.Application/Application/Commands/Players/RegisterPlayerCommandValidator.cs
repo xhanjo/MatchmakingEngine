@@ -1,6 +1,6 @@
 ﻿using FluentValidation;
 
-namespace MatchmakingEngine.Application.Commands.Players;
+namespace MatchmakingEngine.Application.Application.Commands.Players;
 
 public class RegisterPlayerCommandValidator : AbstractValidator<RegisterPlayerCommand>
 {

@@ -1,9 +1,10 @@
-﻿using MatchmakingEngine.Application.Queries.Players;
+using MatchmakingEngine.Application.Application.Queries.Players;
+using MatchmakingEngine.Application.DTO;
 using MatchmakingEngine.Application.Interfaces.Repositories;
-using MatchmakingEngine.DTO;
 using MatchmakingEngine.Application.Interfaces;
 using Moq;
 using Xunit;
+using MatchmakingEngine.Domain;
 
 namespace MatchmakingEngine.Tests.Application.Commands.Auth;
 
@@ -23,17 +24,17 @@ public class GetAllPlayersQueryHandlerTests
     [Fact]
     public async Task Handle_ExecutesFactory_ReturnsMappedPlayers()
     {
-        var dbPlayers = new List<Domain.Player>
+        var dbPlayers = new List<Player>
         {
-            new Domain.Player { Id = Guid.NewGuid(), Username = "TestUser", PasswordHash = "hash"}
+            new Player { Id = Guid.NewGuid(), Username = "TestUser", PasswordHash = "hash"}
         };
         _playerRepoMock.Setup(x => x.GetAllAsync(false)).ReturnsAsync(dbPlayers);
 
         _cacheMock.Setup(x => x.GetOrCreateAsync(
             It.IsAny<string>(),
-            It.IsAny<Func<Task<List<PlayerResponseDto>>>>(),
+            It.IsAny<Func<Task<List<PlayerResponseDto>?>>>(),
             It.IsAny<TimeSpan?>()))
-            .Returns(async (string key, Func<Task<List<PlayerResponseDto>>> factory, TimeSpan? expiration) =>
+            .Returns(async (string key, Func<Task<List<PlayerResponseDto>?>> factory, TimeSpan? expiration) =>
             {
                 return await factory();
             });

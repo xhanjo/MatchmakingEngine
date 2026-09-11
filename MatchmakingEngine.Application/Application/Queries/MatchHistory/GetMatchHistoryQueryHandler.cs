@@ -8,7 +8,7 @@ namespace MatchmakingEngine.Application.Application.Queries.MatchHistory;
 public class GetMatchHistoryQuery : IRequest<List<MatchDto>>
 {
     public Guid PlayerId { get; }
-    public GetMatchHistoryQuery(Guid playerID) => PlayerId = playerID;
+    public GetMatchHistoryQuery(Guid playerId) => PlayerId = playerId;
 }
 
 public class GetMatchHistoryQueryHandler : IRequestHandler<GetMatchHistoryQuery, List<MatchDto>>

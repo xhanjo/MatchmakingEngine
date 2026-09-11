@@ -1,12 +1,12 @@
+using MatchmakingEngine.Application.DTO;
 using MatchmakingEngine.Application.Interfaces;
 using MatchmakingEngine.Application.Interfaces.Repositories;
 using MatchmakingEngine.Domain;
 using MatchmakingEngine.Domain.Exceptions;
-using MatchmakingEngine.DTO;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
-namespace MatchmakingEngine.Application.Commands.Matchmaking;
+namespace MatchmakingEngine.Application.Application.Commands.Matchmaking;
 
 public class CompleteMatchCommandHandler : IRequestHandler<CompleteMatchCommand, CompleteMatchResult>
 {

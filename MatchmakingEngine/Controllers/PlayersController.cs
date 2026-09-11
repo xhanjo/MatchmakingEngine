@@ -1,8 +1,8 @@
+using MatchmakingEngine.Application.Application.Commands.Players;
+using MatchmakingEngine.Application.Application.Queries.Players;
+using MatchmakingEngine.Application.DTO;
 using Microsoft.AspNetCore.Mvc;
 using MediatR;
-using MatchmakingEngine.DTO;
-using MatchmakingEngine.Application.Queries.Players;
-using MatchmakingEngine.Application.Commands.Players;
 using Microsoft.AspNetCore.Authorization;
 
 namespace MatchmakingEngine.Controllers;

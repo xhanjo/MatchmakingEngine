@@ -1,9 +1,10 @@
-using MatchmakingEngine.Domain;
+using MatchmakingEngine.Application.Interfaces;
 using MatchmakingEngine.Application.Interfaces.Repositories;
-using Microsoft.AspNetCore.SignalR;
+using MatchmakingEngine.Domain;
 using MatchmakingEngine.Hubs;
+using Microsoft.AspNetCore.SignalR;
 
-namespace MatchmakingEngine.Services;
+namespace MatchmakingEngine.HostedServices;
 
 public class MatchmakingWorker : BackgroundService
 {
@@ -60,7 +61,7 @@ public class MatchmakingWorker : BackgroundService
         var currentDelta = Math.Min(300, 50 + waitTimeSeconds.TotalSeconds * 5);
         var minMmr = anchor.Mmr - currentDelta;
         var maxMmr = anchor.Mmr + currentDelta;
-        var MaxTrustDifference = Math.Min(1.0, 0.3 + (waitTimeSeconds.TotalSeconds / 15.0) * 0.1);
+        var maxTrustDifference = Math.Min(1.0, 0.3 + (waitTimeSeconds.TotalSeconds / 15.0) * 0.1);
 
         var candidateIds = await _queue.GetCandidatesByMmrRangeAsync(anchor.Region, gameMode, minMmr, maxMmr);
 
@@ -75,7 +76,7 @@ public class MatchmakingWorker : BackgroundService
 
             var trustDiff = Math.Abs(anchor.TrustFactor - candidateTicket.TrustFactor);
 
-            if (trustDiff <= MaxTrustDifference)
+            if (trustDiff <= maxTrustDifference)
             {
                 opponent = candidateTicket;
                 break;

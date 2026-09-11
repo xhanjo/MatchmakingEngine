@@ -33,7 +33,7 @@ public class LeaderboardSeederWorker : BackgroundService
         }
         catch (Exception)
         {
-
+            // ignored
         }
     }
 }

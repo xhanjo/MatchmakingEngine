@@ -1,6 +1,5 @@
 ﻿using MatchmakingEngine.Application.Interfaces.Repositories;
 using MatchmakingEngine.Domain.Exceptions;
-using System.Drawing;
 using MediatR;
 
 namespace MatchmakingEngine.Application.Application.Commands.PartySystem;

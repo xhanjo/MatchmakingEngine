@@ -1,11 +1,8 @@
 using MatchmakingEngine.Application.Interfaces.Auth;
 using MatchmakingEngine.Application.Interfaces.Repositories;
 using MediatR;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 
-namespace MatchmakingEngine.Application.Commands.Auth;
+namespace MatchmakingEngine.Application.Application.Commands.Auth;
 
 public class LoginCommandHandler : IRequestHandler<LoginCommand, string>
 {
@@ -20,7 +17,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, string>
 
     public async Task<string> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
-        var player = await _playerRepository.GetByUsernameAsync(request.Username);
+        var player = await _playerRepository.GetByUsernameAsync(request.Username, cancellationToken: cancellationToken);
 
         if (player == null || !BCrypt.Net.BCrypt.Verify(request.Password, player.PasswordHash))
             throw new UnauthorizedAccessException("Invalid credentials");

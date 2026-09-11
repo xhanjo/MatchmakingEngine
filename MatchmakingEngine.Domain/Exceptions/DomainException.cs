@@ -1,8 +1,3 @@
 ﻿namespace MatchmakingEngine.Domain.Exceptions;
 
-public class DomainException : System.Exception
-{
-    public DomainException(string message) : base(message)
-    {
-    }
-}
+public class DomainException(string message) : Exception(message);

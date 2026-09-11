@@ -1,9 +1,9 @@
-﻿using MediatR;
-using MatchmakingEngine.DTO;
+﻿using MatchmakingEngine.Application.DTO;
 using MatchmakingEngine.Application.Interfaces;
 using MatchmakingEngine.Application.Interfaces.Repositories;
+using MediatR;
 
-namespace MatchmakingEngine.Application.Queries.Players;
+namespace MatchmakingEngine.Application.Application.Queries.Players;
 
 public class GetAllPlayersQueryHandler : IRequestHandler<GetAllPlayersQuery, List<PlayerResponseDto>>
 {
@@ -22,7 +22,7 @@ public class GetAllPlayersQueryHandler : IRequestHandler<GetAllPlayersQuery, Lis
             key: "all_players",
             factory: async () =>
             {
-                var players = await _playerRepository.GetAllAsync(trackChanges: false);
+                var players = await _playerRepository.GetAllAsync(trackChanges: false, cancellationToken: cancellationToken);
                 return players.Select(p => new PlayerResponseDto(
                     p.Id, p.Username, p.Mmr, p.TrustFactor, p.Region, p.Role, p.CreatedAt
                     )).ToList();

@@ -1,6 +1,6 @@
 ﻿using MatchmakingEngine.Application.Interfaces.Repositories;
-using MatchmakingEngine.Data;
 using MatchmakingEngine.Domain;
+using MatchmakingEngine.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace MatchmakingEngine.Infrastructure.Repositories;

@@ -1,13 +1,11 @@
-using MatchmakingEngine.Application.Interfaces.Repositories;
+using MatchmakingEngine.Application.Interfaces;
 using MatchmakingEngine.Domain;
+using MatchmakingEngine.HostedServices;
 using MatchmakingEngine.Hubs;
-using MatchmakingEngine.Services;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Xunit;
-using GameMatch = MatchmakingEngine.Domain.Match;
 
 namespace MatchmakingEngine.Tests.Services;
 

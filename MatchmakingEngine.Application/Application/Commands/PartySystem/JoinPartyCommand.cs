@@ -1,10 +1,8 @@
-using MatchmakingEngine.Application.Application.Queries.MatchHistory;
 using MatchmakingEngine.Application.DTO;
 using MatchmakingEngine.Application.Interfaces.Repositories;
 using MatchmakingEngine.Domain;
 using MatchmakingEngine.Domain.Exceptions;
 using MediatR;
-using System.Runtime.CompilerServices;
 
 namespace MatchmakingEngine.Application.Application.Commands.PartySystem;
 
@@ -15,9 +13,9 @@ public class JoinPartyCommandHandler : IRequestHandler<JoinPartyCommand, PartyDt
     private readonly IPartyRepository _partyRepository;
     private readonly IPlayerRepository _playerRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly MatchmakingEngine.Application.Interfaces.ICacheService _cacheService;
+    private readonly Interfaces.ICacheService _cacheService;
 
-    public JoinPartyCommandHandler(IPartyRepository partyRepository, IPlayerRepository playerRepository, IUnitOfWork unitOfWork, MatchmakingEngine.Application.Interfaces.ICacheService cacheService)
+    public JoinPartyCommandHandler(IPartyRepository partyRepository, IPlayerRepository playerRepository, IUnitOfWork unitOfWork, Interfaces.ICacheService cacheService)
     {
         _partyRepository = partyRepository;
         _playerRepository = playerRepository;
@@ -28,7 +26,7 @@ public class JoinPartyCommandHandler : IRequestHandler<JoinPartyCommand, PartyDt
     public async Task<PartyDto> Handle(JoinPartyCommand request, CancellationToken cancellationToken)
     {
         var cacheKey = $"party_invite:{request.PlayerId}:{request.PartyId}";
-        var invite = await _cacheService.GetOrCreateAsync(cacheKey, () => Task.FromResult<PartyInviteCache>(null!));
+        var invite = await _cacheService.GetOrCreateAsync(cacheKey, () => Task.FromResult<PartyInviteCache>(null!)!);
 
         if (invite == null)
             throw new ConflictException("You don't have a valid invite to this party.");

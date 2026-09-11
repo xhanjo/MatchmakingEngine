@@ -1,7 +1,6 @@
 using MatchmakingEngine.Application.Interfaces.Repositories;
 using MediatR;
 using MatchmakingEngine.Domain.Exceptions;
-using System.Security;
 
 namespace MatchmakingEngine.Application.Application.Commands.Friends;
 

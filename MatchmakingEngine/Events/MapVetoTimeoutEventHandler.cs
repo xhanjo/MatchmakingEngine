@@ -22,7 +22,7 @@ public class MapVetoTimeoutEventHandler : INotificationHandler<MapVetoTimeoutEve
     public async Task Handle(MapVetoTimeoutEvent notification, CancellationToken cancellationToken)
     {
         var match = await _matchRepo.GetByIdWithPlayersAsync(notification.MatchId, trackChanges: false, cancellationToken);
-        if (match == null || match.Status != MatchmakingEngine.Domain.MatchStatus.MapVeto) return;
+        if (match == null || match.Status != Domain.MatchStatus.MapVeto) return;
 
         if (match.CurrentVetoTurnPlayerId != notification.ExpectedTurnPlayerId) return;
 

@@ -1,15 +1,8 @@
-﻿using MatchmakingEngine.Data;
-using MatchmakingEngine.Domain;
+﻿using MatchmakingEngine.Domain;
 using MatchmakingEngine.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+using MatchmakingEngine.Infrastructure.Data;
 
 namespace MatchmakingEngine.HostedServices;
 

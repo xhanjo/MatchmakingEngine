@@ -9,11 +9,13 @@ using MatchmakingEngine.Infrastructure.Auth;
 using MatchmakingEngine.Infrastructure.Repositories;
 using MatchmakingEngine.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using StackExchange.Redis;
 using System.Text;
+using System.Net;
 using System.Threading.RateLimiting;
 using Hangfire;
 using Hangfire.PostgreSql;
@@ -157,6 +159,23 @@ builder.Services.AddStackExchangeRedisCache(options =>
 
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
 
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    
+    var trustedProxies = builder.Configuration.GetSection("TrustedProxies").Get<string[]>();
+    if (trustedProxies != null)
+    {
+        foreach (var proxy in trustedProxies)
+        {
+            if (IPAddress.TryParse(proxy, out var ipAddress))
+            {
+                options.KnownProxies.Add(ipAddress);
+            }
+        }
+    }
+});
+
 builder.Services.AddRateLimiter(options =>
 {
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
@@ -182,6 +201,9 @@ builder.Services.AddHangfireServer();
 var app = builder.Build();
 
 app.UseExceptionHandler();
+
+app.UseForwardedHeaders(); 
+
 app.UseSerilogRequestLogging();
 
 if (app.Environment.IsDevelopment())

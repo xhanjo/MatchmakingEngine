@@ -26,13 +26,21 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
     
     public async Task InitializeAsync()
     {
-        // Запускаємо обидва контейнери паралельно для максимальної швидкості
+        // 1. Запускаємо контейнери
         await Task.WhenAll(_dbContainer.StartAsync(), _redisContainer.StartAsync());
+
+        // 2. Перевизначаємо конфігурацію для всього додатку (включно з Hangfire та Redis)
+        Environment.SetEnvironmentVariable("ConnectionStrings__DefaultConnection", _dbContainer.GetConnectionString());
+        Environment.SetEnvironmentVariable("Redis__Configuration", _redisContainer.GetConnectionString());
+        Environment.SetEnvironmentVariable("RunMatchmakingWorker", "false"); 
     }
 
     public new async Task DisposeAsync()
     {
-        // Зупиняємо обидва контейнери після завершення тестів
+        Environment.SetEnvironmentVariable("ConnectionStrings__DefaultConnection", null);
+        Environment.SetEnvironmentVariable("Redis__Configuration", null);
+        Environment.SetEnvironmentVariable("RunMatchmakingWorker", null);
+
         await Task.WhenAll(_dbContainer.StopAsync(), _redisContainer.StopAsync());
     }
 

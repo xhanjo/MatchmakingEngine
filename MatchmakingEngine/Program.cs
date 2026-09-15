@@ -282,3 +282,4 @@ app.MapGet("/", () => "Matchmaking Engine API is running!");
 
 app.Run();
 
+public partial class Program { }

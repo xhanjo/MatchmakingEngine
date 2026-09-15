@@ -22,7 +22,7 @@ public class TwoLevelCacheServiceIntegrationTests : BaseIntegrationTest
         var expectedValue = "Grandmaster";
         var factoryCallCount = 0;
 
-        async Task<string> ValueFactory()
+        async Task<string?> ValueFactory()
         {
             factoryCallCount++;
             return await Task.FromResult(expectedValue);

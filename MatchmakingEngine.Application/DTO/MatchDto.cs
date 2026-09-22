@@ -12,7 +12,9 @@ public record MatchPlayerDto(
     int Score,
     bool IsMvp,
     int Team,
-    bool IsWinner
+    bool IsWinner,
+    int Mmr = 0,
+    int MmrChange = 0
 );
 
 public record MatchDto(

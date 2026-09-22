@@ -112,6 +112,7 @@ public class CompleteMatchCommandHandler : IRequestHandler<CompleteMatchCommand,
                 mmrChange = -p.Player.Mmr;
 
             p.Player.Mmr += mmrChange;
+            p.MmrChange = mmrChange;
 
             p.Player.TrustFactor = Math.Min(1.0, p.Player.TrustFactor + 0.02);
 

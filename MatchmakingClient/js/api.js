@@ -1,27 +1,42 @@
-const API_URL = 'http://matchmaking-engine-env.eba-mrkcxifv.eu-north-1.elasticbeanstalk.com/api';
+const DEFAULT_API_URL = 'http://matchmaking-engine-env.eba-mrkcxifv.eu-north-1.elasticbeanstalk.com/api';
 
 const Api = {
+    getBaseUrl() {
+        return (window.APP_CONFIG && window.APP_CONFIG.API_URL) ? window.APP_CONFIG.API_URL : DEFAULT_API_URL;
+    },
+
     async request(endpoint, options = {}) {
-        const url = `${API_URL}${endpoint}`;
+        const url = `${this.getBaseUrl()}${endpoint}`;
         
-        const token = Auth.getToken();
+        const token = window.Auth ? window.Auth.getToken() : '';
         const headers = {
             'Content-Type': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
             ...(options.headers || {})
         };
 
-        const response = await fetch(url, { ...options, headers });
+        let response;
+        try {
+            response = await fetch(url, { ...options, headers });
+        } catch (networkError) {
+            console.error(`Network error connecting to ${url}:`, networkError);
+            throw new Error("Unable to connect to server. Please check your internet connection.");
+        }
         
         if (response.status === 401) {
             if (!window.location.href.includes('login.html') && !window.location.href.includes('register.html')) {
-                Auth.logout();
+                if (window.Auth) window.Auth.logout();
             }
-            throw new Error("Invalid username or password");
+            throw new Error("Authentication failed or session expired.");
         }
 
         const isJson = response.headers.get('content-type')?.includes('application/json');
-        const data = isJson ? await response.json() : await response.text();
+        let data;
+        try {
+            data = isJson ? await response.json() : await response.text();
+        } catch (e) {
+            data = null;
+        }
 
         if (!response.ok) {
             let errorMsg = `Error ${response.status}`;
@@ -84,3 +99,4 @@ const Api = {
 };
 
 window.Api = Api;
+window.API_URL = Api.getBaseUrl();

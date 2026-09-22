@@ -28,11 +28,13 @@ const Auth = {
 
     isLoggedIn() {
         const payload = this.getDecodedToken();
-        if (!payload) return false;
+        const token = this.getToken();
+        if (!payload || !token) return false;
         
         try {
             const exp = payload.exp * 1000;
-            return Date.now() < exp;
+            // 30-second grace window to prevent edge-case expirations during in-flight requests
+            return Date.now() < (exp - 30000);
         } catch (e) {
             return false;
         }
@@ -50,7 +52,7 @@ const Auth = {
 
     getUserId() {
         const decoded = this.getDecodedToken();
-        return decoded ? decoded.PlayerId : null;
+        return decoded ? (decoded.PlayerId || decoded.playerId || decoded.nameid || decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"] || decoded.sub) : null;
     },
 
     getUserName() {
@@ -62,11 +64,12 @@ const Auth = {
         const decoded = this.getDecodedToken();
         if (!decoded) return false;
         const role = decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
-        return role === "Admin";
+        return role === "Admin" || role === "SuperAdmin";
     },
 
     requireAuth() {
         if (!this.isLoggedIn()) {
+            this.clearToken();
             window.location.href = 'login.html';
         }
     },
@@ -79,13 +82,21 @@ const Auth = {
     },
 
     async logout() {
+        const token = this.getToken();
         this.clearToken();
         try {
-            await fetch(`${API_URL}/Auth/logout`, { 
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${this.getToken()}` }
-            });
-        } catch (e) {}
+            if (token) {
+                const apiUrl = (window.APP_CONFIG && window.APP_CONFIG.API_URL) 
+                    ? window.APP_CONFIG.API_URL 
+                    : (typeof API_URL !== 'undefined' ? API_URL : '/api');
+                await fetch(`${apiUrl}/Auth/logout`, { 
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+            }
+        } catch (e) {
+            console.warn("Logout request failed:", e);
+        }
         window.location.href = 'login.html';
     }
 };

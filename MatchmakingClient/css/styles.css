@@ -1,5 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@500;700;900&display=swap');
-
+/* Stylesheet for MatchmakingClient */
 /* ============================================
    ANIMATIONS
    ============================================ */
@@ -305,3 +304,21 @@
 }
 .admin-table tbody tr:hover { background: rgba(255,255,255,0.015); }
 .admin-table tbody tr:last-child td { border-bottom: none; }
+
+/* ============================================
+   ACCESSIBILITY: REDUCED MOTION
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+    *, ::before, ::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* FaceIt style instant veto grid lock */
+#veto-maps-grid.veto-locked {
+    pointer-events: none !important;
+    cursor: wait !important;
+}

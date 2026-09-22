@@ -1,4 +1,4 @@
-﻿namespace MatchmakingEngine.Application.DTO;
+namespace MatchmakingEngine.Application.DTO;
 
 public class VetoPlayerDto
 {
@@ -18,6 +18,7 @@ public class VetoStateDto
     public Guid MatchId { get; set; }
     public string Status { get; set; } = string.Empty;
     public int CurrentTurnTeam { get; set; }
+    public Guid? CurrentVetoTurnPlayerId { get; set; }
     public List<VetoPlayerDto> Team1 { get; set; } = new();
     public List<VetoPlayerDto> Team2 { get; set; } = new();
     public List<VetoMapDto> Maps { get; set; } = new();
@@ -28,6 +29,7 @@ public class VetoStateDto
         {
             MatchId = match.Id,
             Status = match.Status == Domain.MatchStatus.MapVeto ? "InProgress" : "Completed",
+            CurrentVetoTurnPlayerId = match.CurrentVetoTurnPlayerId,
             Team1 = match.Players.Where(p => p.Team == 1)
                 .Select(p => new VetoPlayerDto { PlayerId = p.PlayerId, Username = p.Player.Username }).ToList(),
             Team2 = match.Players.Where(p => p.Team == 2)

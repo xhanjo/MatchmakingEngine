@@ -39,16 +39,34 @@ const App = {
         setTimeout(() => this.handleRoute(), 0); // initial route
 
         // Event listeners
-        document.getElementById('find-match-btn').addEventListener('click', () => this.toggleMatchmaking());
-        document.getElementById('create-party-btn').addEventListener('click', () => this.createParty());
-        document.getElementById('leave-party-btn').addEventListener('click', () => this.leaveParty());
-        document.getElementById('accept-match-btn').addEventListener('click', () => this.acceptMatch());
-        document.getElementById('decline-match-btn').addEventListener('click', () => this.declineMatch());
-        document.getElementById('player-search').addEventListener('input', (e) => this.handlePlayerSearch(e.target.value));
+        const findMatchBtn = document.getElementById('find-match-btn');
+        if (findMatchBtn) findMatchBtn.addEventListener('click', () => this.toggleMatchmaking());
+        const createPartyBtn = document.getElementById('create-party-btn');
+        if (createPartyBtn) createPartyBtn.addEventListener('click', () => this.createParty());
+        const leavePartyBtn = document.getElementById('leave-party-btn');
+        if (leavePartyBtn) leavePartyBtn.addEventListener('click', () => this.leaveParty());
+        const acceptMatchBtn = document.getElementById('accept-match-btn');
+        if (acceptMatchBtn) acceptMatchBtn.addEventListener('click', () => this.acceptMatch());
+        const declineMatchBtn = document.getElementById('decline-match-btn');
+        if (declineMatchBtn) declineMatchBtn.addEventListener('click', () => this.declineMatch());
+        const playerSearch = document.getElementById('player-search');
+        if (playerSearch) playerSearch.addEventListener('input', (e) => this.handlePlayerSearch(e.target.value));
 
         await this.loadInitialData();
-        setInterval(() => this.loadFriends(), 10000);
-        setInterval(() => this.updateMatchmakingStatus(), 5000);
+
+        // Optimized intervals (SignalR handles real-time events; these are fallbacks)
+        this._pollingIntervals = [
+            setInterval(() => this.loadFriends(), 45000),
+            setInterval(() => this.updateMatchmakingStatus(), 15000)
+        ];
+
+        // Refresh on window focus when user returns to tab
+        window.addEventListener('focus', () => {
+            if (Auth.isLoggedIn()) {
+                this.loadFriends();
+                this.updateMatchmakingStatus();
+            }
+        });
     },
 
     async loadInitialData() {
@@ -100,22 +118,32 @@ const App = {
     async updateMatchmakingStatus() {
         try {
             const status = await Api.getMatchmakingStatus();
-            this.state.status = status ? status.status : 'Idle';
-            if (status && status.lobbyId) {
-                this.state.currentMatchId = status.lobbyId;
+            this.state.status = status ? (status.status || status.Status || 'Idle') : 'Idle';
+            const lobbyId = status?.lobbyId || status?.LobbyId || status?.vetoState?.matchId || status?.VetoState?.MatchId;
+            if (lobbyId) {
+                this.state.currentMatchId = lobbyId;
             }
 
-            if (this.state.status === 'MapVeto' && status.vetoState) {
+            // If already actively inside the match room during Veto phase, let SignalR handle real-time events
+            if (this.state.status === 'Veto' && window.location.hash === '#match-room') {
+                return;
+            }
+
+            const vetoState = status?.vetoState || status?.VetoState;
+            if (this.state.status === 'MapVeto' && vetoState) {
                 this.state.status = 'Veto';
-                this.state.vetoState = status.vetoState;
+                this.state.vetoState = vetoState;
+                if (vetoState.matchId || vetoState.MatchId) {
+                    this.state.currentMatchId = vetoState.matchId || vetoState.MatchId;
+                }
                 
                 const currentHash = window.location.hash;
                 if (currentHash !== '#match-room') {
                     window.location.hash = '#match-room';
                 }
 
-                const team1 = status.vetoState.team1[0]?.username || 'Team 1';
-                const team2 = status.vetoState.team2[0]?.username || 'Team 2';
+                const team1 = (vetoState.team1 || vetoState.Team1 || [])[0]?.username || (vetoState.team1 || vetoState.Team1 || [])[0]?.Username || 'Team 1';
+                const team2 = (vetoState.team2 || vetoState.Team2 || [])[0]?.username || (vetoState.team2 || vetoState.Team2 || [])[0]?.Username || 'Team 2';
                 const t1 = document.querySelector('#veto-team1 .team-name');
                 const t2 = document.querySelector('#veto-team2 .team-name');
                 if (t1) t1.innerText = team1;
@@ -142,7 +170,7 @@ const App = {
         if (this.state.pendingRequests.length > 0) {
             const header = document.createElement('p');
             header.className = 'pending-header';
-            header.innerText = `⏳ Pending (${this.state.pendingRequests.length})`;
+            header.innerText = `Pending (${this.state.pendingRequests.length})`;
             pendingList.appendChild(header);
 
             this.state.pendingRequests.forEach(req => {
@@ -154,8 +182,8 @@ const App = {
                         <span class="item-sub">Friend request</span>
                     </div>
                     <div class="item-actions">
-                        <button class="btn btn-success btn-sm" onclick="App.acceptFriend('${req.requestId}')">✓</button>
-                        <button class="btn btn-danger btn-sm" onclick="App.declineFriend('${req.requestId}')">✕</button>
+                        <button class="btn btn-primary btn-sm" onclick="App.acceptFriend('${req.requestId}')">Accept</button>
+                        <button class="btn btn-secondary btn-sm" onclick="App.declineFriend('${req.requestId}')">Decline</button>
                     </div>
                 `;
                 pendingList.appendChild(item);
@@ -227,7 +255,7 @@ const App = {
             item.className = 'party-member';
             item.innerHTML = `
                 <div>
-                    ${isLeader ? '<span class="leader-crown">👑</span>' : ''}
+                    ${isLeader ? '<span class="leader-crown text-amber-400 font-bold text-xs mr-1">[Leader]</span>' : ''}
                     <span class="item-name">${Utils.escapeHtml(m.username)}</span>
                 </div>
                 <span class="mmr-badge">${m.mmr} MMR</span>
@@ -270,7 +298,7 @@ const App = {
             btn.classList.add('find-match-idle');
             btn.innerText = 'MATCH IN PROGRESS';
             btn.disabled = true;
-            const shortId = this.state.currentMatchId ? this.state.currentMatchId.substring(0, 8) : '?';
+            const shortId = this.state.currentMatchId ? Utils.escapeHtml(this.state.currentMatchId.substring(0, 8)) : '?';
             statusText.innerHTML = `
                 <span style="color:#10b981; font-weight:600;">● Match in progress</span>
                 <span style="color:#334155; font-size:0.72rem; margin-left:8px;">ID: ${shortId}…</span>
@@ -290,27 +318,30 @@ const App = {
         }
         
         // Ensure party UI updates correctly if status changes
-        if (this.state.party || !this.state.party) {
-            const createBtn = document.getElementById('create-party-btn');
-            const leaveBtn = document.getElementById('leave-party-btn');
-            const partyContainer = document.getElementById('party-container');
-            const partyWrapper = document.getElementById('party-wrapper');
-            
-            if (!this.state.party) {
-                createBtn.style.display = this.state.status !== 'Idle' ? 'none' : 'inline-flex';
-                partyContainer.style.display = 'none';
-                if (partyWrapper) partyWrapper.style.display = this.state.status !== 'Idle' ? 'none' : 'block';
-            } else {
-                createBtn.style.display = 'none';
-                partyContainer.style.display = 'block';
-                leaveBtn.style.display = this.state.status !== 'Idle' ? 'none' : 'block';
-                if (partyWrapper) partyWrapper.style.display = 'block';
-            }
+        const createBtn = document.getElementById('create-party-btn');
+        const leaveBtn = document.getElementById('leave-party-btn');
+        const partyContainer = document.getElementById('party-container');
+        const partyWrapper = document.getElementById('party-wrapper');
+        
+        if (!this.state.party) {
+            if (createBtn) createBtn.style.display = this.state.status !== 'Idle' ? 'none' : 'inline-flex';
+            if (partyContainer) partyContainer.style.display = 'none';
+            if (partyWrapper) partyWrapper.style.display = this.state.status !== 'Idle' ? 'none' : 'block';
+        } else {
+            if (createBtn) createBtn.style.display = 'none';
+            if (partyContainer) partyContainer.style.display = 'block';
+            if (leaveBtn) leaveBtn.style.display = this.state.status !== 'Idle' ? 'none' : 'block';
+            if (partyWrapper) partyWrapper.style.display = 'block';
         }
     },
 
     // ─── ACTIONS ─────────────────────────────────────────────────────────
     async toggleMatchmaking() {
+        if (this._isTogglingMatchmaking) return;
+        this._isTogglingMatchmaking = true;
+        const btn = document.getElementById('find-match-btn');
+        if (btn) btn.disabled = true;
+
         try {
             if (this.state.status === 'Searching') {
                 await Api.leaveMatchmaking();
@@ -322,6 +353,9 @@ const App = {
             await this.updateMatchmakingStatus();
         } catch (error) {
             Utils.showToast(error.message, 'error');
+        } finally {
+            this._isTogglingMatchmaking = false;
+            if (btn) btn.disabled = false;
         }
     },
 
@@ -472,7 +506,7 @@ const App = {
         this.renderMatchmakingButton();
 
         const statusText = document.getElementById('match-status-text');
-        const shortId = matchId ? matchId.substring(0, 8) : '?';
+        const shortId = matchId ? Utils.escapeHtml(matchId.substring(0, 8)) : '?';
         statusText.innerHTML = `
             <span style="color:#10b981; font-weight:600;">● Match in progress</span>
             <span style="color:#334155; font-size:0.72rem; margin-left:8px;">ID: ${shortId}…</span>
@@ -525,7 +559,6 @@ const App = {
             // Navigate back to lobby and force route refresh
             window.location.hash = '#lobby';
             this.handleRoute();
-            this.loadProfile();
             this.loadLeaderboard();
             this.loadMyMmr();
             this.updateMatchmakingStatus();
@@ -573,7 +606,7 @@ const App = {
         const declineBtn = document.getElementById('decline-match-btn');
 
         // Immediate visual feedback before API call
-        btn.innerText = '✓  ACCEPTED';
+        btn.innerText = 'ACCEPTED';
         btn.style.cssText = 'width:100%; padding:16px; border-radius:12px; font-family:Outfit; font-weight:900; font-size:1.125rem; text-transform:uppercase; letter-spacing:0.1em; color:white; border:none; cursor:default; background:#047857; box-shadow:0 0 25px rgba(16,185,129,0.35);';
         btn.disabled = true;
         declineBtn.disabled = true;
@@ -630,12 +663,34 @@ const App = {
     async showProfile() {
         try {
             const userId = Auth.getUserId();
-            const [player, history] = await Promise.all([
+            const [player, history, leaderboard] = await Promise.all([
                 Api.getPlayer(userId),
-                Api.getMyHistory()
+                Api.getMyHistory(),
+                Api.getLeaderboard().catch(() => [])
             ]);
 
-            const regions = { 1: 'EU West', 2: 'EU East', 3: 'NA East', 4: 'Asia' };
+            const regions = window.APP_CONFIG?.REGIONS || { 1: 'EU West', 2: 'EU East', 3: 'NA East', 4: 'Asia' };
+
+            // Determine leaderboard position
+            let leaderboardRankText = 'Unranked';
+            let leaderboardRankColor = '#94a3b8';
+            let rankBadgeHtml = '';
+
+            if (Array.isArray(leaderboard) && leaderboard.length > 0) {
+                const rankIndex = leaderboard.findIndex(p => {
+                    const pid = p.playerId || p.PlayerId || p.id || '';
+                    return pid.toLowerCase() === userId.toLowerCase();
+                });
+
+                if (rankIndex !== -1) {
+                    const rank = rankIndex + 1;
+                    leaderboardRankText = `#${rank}`;
+                    leaderboardRankColor = rank <= 3 ? '#fbbf24' : '#818cf8';
+                    rankBadgeHtml = `<span style="background:rgba(251,191,36,0.12); color:#fbbf24; border:1px solid rgba(251,191,36,0.3); font-family:Outfit; font-weight:800; font-size:0.7rem; padding:2px 8px; border-radius:12px; margin-left:8px;">Rank #${rank}</span>`;
+                } else if (player && player.mmr) {
+                    leaderboardRankText = 'Top 100+';
+                }
+            }
 
             document.getElementById('profile-stats').innerHTML = `
                 <div style="display:flex; align-items:center; gap:16px; margin-bottom:16px;">
@@ -643,20 +698,27 @@ const App = {
                         ${(player.username || 'P').charAt(0).toUpperCase()}
                     </div>
                     <div>
-                        <div style="font-family:Outfit; font-weight:700; font-size:1.1rem; color:#e2e8f0;">${Utils.escapeHtml(player.username)}</div>
+                        <div style="display:flex; align-items:center;">
+                            <span style="font-family:Outfit; font-weight:700; font-size:1.1rem; color:#e2e8f0;">${Utils.escapeHtml(player.username)}</span>
+                            ${rankBadgeHtml}
+                        </div>
                         <div style="font-size:0.75rem; color:#475569; margin-top:2px;">
                             ${regions[player.region] || 'Unknown'} &nbsp;•&nbsp; Joined ${new Date(player.createdAt).toLocaleDateString()}
                         </div>
                     </div>
                 </div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                    <div style="background:#131825; border:1px solid #1c2035; border-radius:10px; padding:12px 16px;">
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
+                    <div style="background:#131825; border:1px solid #1c2035; border-radius:10px; padding:12px 14px;">
                         <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#475569; font-family:Outfit; font-weight:700; margin-bottom:4px;">MMR</div>
-                        <div style="font-family:Outfit; font-weight:900; font-size:1.5rem; color:#22d3ee;">${player.mmr}</div>
+                        <div style="font-family:Outfit; font-weight:900; font-size:1.4rem; color:#22d3ee;">${player.mmr}</div>
                     </div>
-                    <div style="background:#131825; border:1px solid #1c2035; border-radius:10px; padding:12px 16px;">
+                    <div style="background:#131825; border:1px solid #1c2035; border-radius:10px; padding:12px 14px;">
+                        <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#475569; font-family:Outfit; font-weight:700; margin-bottom:4px;">Rank</div>
+                        <div style="font-family:Outfit; font-weight:900; font-size:1.4rem; color:${leaderboardRankColor};">${leaderboardRankText}</div>
+                    </div>
+                    <div style="background:#131825; border:1px solid #1c2035; border-radius:10px; padding:12px 14px;">
                         <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#475569; font-family:Outfit; font-weight:700; margin-bottom:4px;">Trust Factor</div>
-                        <div style="font-family:Outfit; font-weight:900; font-size:1.5rem; color:${player.trustFactor >= 0.7 ? '#10b981' : player.trustFactor >= 0.4 ? '#f59e0b' : '#ef4444'};">
+                        <div style="font-family:Outfit; font-weight:900; font-size:1.4rem; color:${player.trustFactor >= 0.7 ? '#10b981' : player.trustFactor >= 0.4 ? '#f59e0b' : '#ef4444'};">
                             ${(player.trustFactor * 100).toFixed(0)}%
                         </div>
                     </div>
@@ -683,25 +745,68 @@ const App = {
 
                     const modeText = (match.gameMode === 1 || match.gameMode === 'Solo') ? 'Solo' : 'Duo';
                     const isMvp = myStats.isMvp;
-                    const isWinner = myStats.isWinner; // Using the new boolean from backend
+                    const isWinner = myStats.isWinner;
 
                     const accentColor = isWinner ? '#10b981' : '#ef4444'; // Green for win, Red for loss
                     const outcomeText = isWinner ? 'WIN' : 'LOSS';
+
+                    // Determine Elo MMR change
+                    let mmrChange = null;
+                    if (typeof myStats.mmrChange === 'number' && myStats.mmrChange !== 0) {
+                        mmrChange = myStats.mmrChange;
+                    } else if (typeof myStats.MmrChange === 'number' && myStats.MmrChange !== 0) {
+                        mmrChange = myStats.MmrChange;
+                    } else {
+                        // Dynamic Elo calculation fallback (matches backend algorithm)
+                        const players = match.players || [];
+                        const team1Players = players.filter(p => (p.team ?? p.Team) === 1);
+                        const team2Players = players.filter(p => (p.team ?? p.Team) === 2);
+                        const myTeam = myStats.team ?? myStats.Team ?? 1;
+
+                        const team1AvgMmr = team1Players.length > 0
+                            ? (team1Players.reduce((acc, p) => acc + (p.mmr ?? p.Mmr ?? player?.mmr ?? 1000), 0) / team1Players.length)
+                            : (player?.mmr ?? 1000);
+                        const team2AvgMmr = team2Players.length > 0
+                            ? (team2Players.reduce((acc, p) => acc + (p.mmr ?? p.Mmr ?? player?.mmr ?? 1000), 0) / team2Players.length)
+                            : (player?.mmr ?? 1000);
+
+                        const myTeamAvg = myTeam === 1 ? team1AvgMmr : team2AvgMmr;
+                        const oppTeamAvg = myTeam === 1 ? team2AvgMmr : team1AvgMmr;
+
+                        const expectedScore = 1.0 / (1.0 + Math.pow(10.0, (oppTeamAvg - myTeamAvg) / 400.0));
+                        const actualScore = isWinner ? 1.0 : 0.0;
+                        const kFactor = 50;
+                        mmrChange = Math.round(kFactor * (actualScore - expectedScore));
+                    }
+
+                    const mmrChangeStr = mmrChange > 0 ? `+${mmrChange}` : `${mmrChange}`;
+                    const mmrChangeColor = mmrChange > 0 ? '#10b981' : (mmrChange < 0 ? '#ef4444' : '#94a3b8');
+
+                    const playerMmr = (myStats.mmr ?? myStats.Mmr) || player?.mmr;
+                    let ratingDisplay = `${mmrChangeStr} MMR`;
+                    if (playerMmr) {
+                        ratingDisplay = `${playerMmr} (${mmrChangeStr})`;
+                    }
+
+                    const mmrBadgeHtml = `
+                        <span style="background:${mmrChangeColor}15; color:${mmrChangeColor}; border:1px solid ${mmrChangeColor}30; font-family:Outfit; font-weight:800; font-size:0.65rem; padding:1px 7px; border-radius:10px;">${mmrChangeStr} MMR</span>
+                    `;
 
                     const mapName = match.selectedMap || 'Unknown';
 
                     return `
                         <div style="background:#0d1018; border:1px solid #1c2035; border-left:3px solid ${accentColor}; border-radius:10px; padding:13px 16px; margin-bottom:8px;">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                                <div style="display:flex; align-items:center; gap:8px;">
+                                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                                     <span style="font-family:Outfit; font-weight:700; font-size:0.85rem; color:#e2e8f0;">${modeText}</span>
                                     <span style="background:${accentColor}15; color:${accentColor}; border:1px solid ${accentColor}30; font-family:Outfit; font-weight:700; font-size:0.65rem; padding:1px 7px; border-radius:10px;">${outcomeText}</span>
-                                    ${isMvp ? '<span style="background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.3); color:#fbbf24; font-family:Outfit; font-weight:700; font-size:0.65rem; padding:1px 7px; border-radius:10px;">⭐ MVP</span>' : ''}
-                                    <span style="background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.3); color:#818cf8; font-family:Outfit; font-weight:700; font-size:0.65rem; padding:1px 7px; border-radius:10px;">🗺️ ${mapName}</span>
+                                    ${mmrBadgeHtml}
+                                    ${isMvp ? '<span style="background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.3); color:#fbbf24; font-family:Outfit; font-weight:700; font-size:0.65rem; padding:1px 7px; border-radius:10px;">MVP</span>' : ''}
+                                    <span style="background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.3); color:#818cf8; font-family:Outfit; font-weight:700; font-size:0.65rem; padding:1px 7px; border-radius:10px;">${mapName}</span>
                                 </div>
                                 <span style="font-size:0.7rem; color:#334155;">${new Date(match.createdAt).toLocaleDateString()}</span>
                             </div>
-                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; text-align:center;">
+                            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; text-align:center;">
                                 <div style="background:#131825; border-radius:6px; padding:6px;">
                                     <div style="font-size:0.65rem; color:#475569; font-family:Outfit; font-weight:700; margin-bottom:2px;">K/D/A</div>
                                     <div style="font-size:0.85rem; color:#e2e8f0; font-weight:600;">${myStats.kills}/${myStats.deaths}/${myStats.assists}</div>
@@ -709,6 +814,10 @@ const App = {
                                 <div style="background:#131825; border-radius:6px; padding:6px;">
                                     <div style="font-size:0.65rem; color:#475569; font-family:Outfit; font-weight:700; margin-bottom:2px;">SCORE</div>
                                     <div style="font-size:0.85rem; color:#22d3ee; font-weight:600;">${myStats.score}</div>
+                                </div>
+                                <div style="background:#131825; border-radius:6px; padding:6px;">
+                                    <div style="font-size:0.65rem; color:#475569; font-family:Outfit; font-weight:700; margin-bottom:2px;">RATING</div>
+                                    <div style="font-size:0.85rem; color:${mmrChangeColor}; font-weight:800; font-family:Outfit;">${ratingDisplay}</div>
                                 </div>
                             </div>
                         </div>
@@ -777,15 +886,28 @@ const App = {
                 return;
             }
             
-            const regions = { 1: 'EU West', 2: 'EU East', 3: 'NA East', 4: 'Asia' };
-            tbody.innerHTML = data.map((p, index) => `
-                <tr style="border-bottom:1px solid #1c2035;" onmouseover="this.style.background='#131825'" onmouseout="this.style.background=''">
-                    <td style="text-align:center; padding:14px 16px; font-family:Outfit; font-weight:900; color:#94a3b8; width:60px;">#${index + 1}</td>
-                    <td style="padding:14px 16px; font-family:Outfit; font-weight:700; color:white;">${Utils.escapeHtml(p.username)}</td>
+            const myUserId = Auth.getUserId();
+            tbody.innerHTML = data.map((p, index) => {
+                const rank = index + 1;
+                const rankBadge = `#${rank}`;
+
+                const pid = p.playerId || p.PlayerId || p.id || '';
+                const isMe = pid.toLowerCase() === (myUserId || '').toLowerCase();
+                const rowStyle = isMe ? 'background:rgba(99,102,241,0.08); border-left:3px solid #6366f1;' : '';
+                const youBadge = isMe ? '<span style="background:#6366f1; color:white; font-size:0.65rem; padding:1px 6px; border-radius:10px; margin-left:8px; font-weight:700; font-family:Outfit;">YOU</span>' : '';
+
+                return `
+                <tr style="border-bottom:1px solid #1c2035; ${rowStyle}" onmouseover="this.style.background='#131825'" onmouseout="this.style.background='${isMe ? 'rgba(99,102,241,0.08)' : ''}'">
+                    <td style="text-align:center; padding:14px 16px; font-family:Outfit; font-weight:900; color:#94a3b8; width:70px;">${rankBadge}</td>
+                    <td style="padding:14px 16px; font-family:Outfit; font-weight:700; color:white;">
+                        ${Utils.escapeHtml(p.username)}
+                        ${youBadge}
+                    </td>
                     <td style="padding:14px 16px; color:#64748b; font-size:0.875rem;">${regions[p.region] || 'Unknown'}</td>
                     <td style="text-align:right; padding:14px 16px; width:130px;"><span class="mmr-badge">${p.mmr} MMR</span></td>
                 </tr>
-            `).join('');
+                `;
+            }).join('');
         } catch (error) {
             console.error('Failed to load leaderboard', error);
             document.getElementById('leaderboard-tbody').innerHTML = '<tr><td colspan="4" class="text-center text-danger py-8">Failed to load</td></tr>';
@@ -820,9 +942,9 @@ const App = {
             return;
         }
 
-        const regions = { 1: 'EU West', 2: 'EU East', 3: 'NA East', 4: 'Asia' };
-        const roles   = { 0: 'Player',  1: 'Admin',   2: 'SuperAdmin' };
-        const roleColors = { 0: '#64748b', 1: '#f59e0b', 2: '#ef4444' };
+        const regions = window.APP_CONFIG?.REGIONS || { 1: 'EU West', 2: 'EU East', 3: 'NA East', 4: 'Asia' };
+        const roles   = window.APP_CONFIG?.ROLES || { 0: 'Player',  1: 'Admin',   2: 'SuperAdmin' };
+        const roleColors = window.APP_CONFIG?.ROLE_COLORS || { 0: '#64748b', 1: '#f59e0b', 2: '#ef4444' };
 
         tbody.innerHTML = players.map(p => `
             <tr class="border-b border-app-border last:border-0 hover:bg-app-elevated transition-colors">
@@ -864,16 +986,17 @@ const App = {
             const statusColor = statusColors[match.status] || '#64748b';
 
             let actionHtml = '<span class="text-slate-500">—</span>';
+            const safeMatchId = Utils.escapeHtml(match.id || '');
             if (match.status === 'Accepted' || match.status === 'StartingServer' || match.status === 'MapVeto') {
-                actionHtml = `<button class="btn btn-primary btn-sm" onclick="App.completeAdminMatch('${match.id}')">Complete</button>`;
+                actionHtml = `<button class="btn btn-primary btn-sm" onclick="App.completeAdminMatch('${safeMatchId}')">Complete</button>`;
             }
 
             return `
                 <tr class="border-b border-app-border last:border-0 hover:bg-app-elevated transition-colors">
-                    <td class="font-mono text-xs text-slate-500 py-4 px-4">${match.id.substring(0, 12)}…</td>
+                    <td class="font-mono text-xs text-slate-500 py-4 px-4">${Utils.escapeHtml(match.id ? match.id.substring(0, 12) : '')}…</td>
                     <td class="py-4 px-4">
                         <span style="padding:4px 10px; border-radius:20px; font-size:0.7rem; font-family:Outfit; font-weight:700; letter-spacing:0.05em; background:${statusColor}15; color:${statusColor}; border:1px solid ${statusColor}30;">
-                            ${match.status}
+                            ${Utils.escapeHtml(match.status || '')}
                         </span>
                     </td>
                     <td class="py-4 px-4"><span class="mmr-badge">${avgMmr}</span></td>
@@ -899,16 +1022,22 @@ const App = {
     // ─── MAP VETO ─────────────────────────────────────────────────────
     onMatchReadyForVeto(vetoState) {
         this.closeMatchModal();
+        this._loggedBans = new Set();
+        const logContainer = document.getElementById('veto-log');
+        if (logContainer) logContainer.innerHTML = '';
+
         this.state.status = 'Veto';
-        this.state.currentMatchId = vetoState.matchId;
+        this.state.currentMatchId = vetoState.matchId || vetoState.MatchId;
         this.state.vetoState = vetoState;
         
         window.location.hash = '#match-room';
         
-        const team1 = vetoState.team1[0]?.username || 'Team 1';
-        const team2 = vetoState.team2[0]?.username || 'Team 2';
-        document.querySelector('#veto-team1 .team-name').innerText = team1;
-        document.querySelector('#veto-team2 .team-name').innerText = team2;
+        const team1 = (vetoState.team1 || vetoState.Team1 || [])[0]?.username || (vetoState.team1 || vetoState.Team1 || [])[0]?.Username || 'Team 1';
+        const team2 = (vetoState.team2 || vetoState.Team2 || [])[0]?.username || (vetoState.team2 || vetoState.Team2 || [])[0]?.Username || 'Team 2';
+        const t1 = document.querySelector('#veto-team1 .team-name');
+        const t2 = document.querySelector('#veto-team2 .team-name');
+        if (t1) t1.innerText = team1;
+        if (t2) t2.innerText = team2;
         
         this.renderMapVetoUI();
         this.startVetoTimer(30);
@@ -938,15 +1067,20 @@ const App = {
     },
 
     onMapVetoUpdated(vetoState) {
-        
-        // Capture the previous turn team before updating state
-        const previousTurnTeam = this.state.vetoState ? this.state.vetoState.currentTurnTeam : 1;
+        // Capture previous turn team before updating
+        const prev = this.state.vetoState;
+        const previousTurnTeam = prev ? (prev.currentTurnTeam ?? prev.CurrentTurnTeam ?? 1) : 1;
         
         this.state.vetoState = vetoState;
+        if (vetoState.matchId || vetoState.MatchId) {
+            this.state.currentMatchId = vetoState.matchId || vetoState.MatchId;
+        }
+
         this.renderMapVetoUI();
 
         // Restart timer for next turn (if veto still in progress)
-        if (vetoState.status === 'InProgress' || vetoState.status === 0) {
+        const status = vetoState.status ?? vetoState.Status;
+        if (status === 'InProgress' || status === 0) {
             this.startVetoTimer(30);
         } else {
             this.stopVetoTimer();
@@ -954,18 +1088,18 @@ const App = {
         
         // Find last banned map to add to log
         const logContainer = document.getElementById('veto-log');
-        if (logContainer) {
-            const lastMap = vetoState.maps.find(m => m.isBanned && !this._loggedBans?.has(m.name));
+        const maps = vetoState.maps || vetoState.Maps || [];
+        if (logContainer && maps.length > 0) {
+            const lastMap = maps.find(m => (m.isBanned ?? m.IsBanned) && !this._loggedBans?.has(m.name || m.Name));
             if (lastMap) {
+                const mapName = lastMap.name || lastMap.Name;
                 this._loggedBans = this._loggedBans || new Set();
-                this._loggedBans.add(lastMap.name);
+                this._loggedBans.add(mapName);
 
-                // Determine which team banned this map using the previous turn state
                 const teamLabel = previousTurnTeam === 1 ? 'Team 1' : 'Team 2';
-                
                 const logItem = document.createElement('div');
                 logItem.className = 'text-danger font-display text-xs p-1 bg-danger/10 rounded border border-danger/20 mb-1 animate-pulse';
-                logItem.innerText = `${teamLabel} banned ${lastMap.name}`;
+                logItem.innerText = `${teamLabel} banned ${mapName}`;
                 logContainer.appendChild(logItem);
                 logContainer.scrollTop = logContainer.scrollHeight;
             }
@@ -974,8 +1108,11 @@ const App = {
 
     onMatchStarting(matchId) {
         if (window.location.hash === '#match-room') {
-            document.getElementById('veto-status-text').innerText = 'Server Starting...';
-            document.getElementById('veto-status-text').style.color = '#10b981';
+            const statusEl = document.getElementById('veto-status-text');
+            if (statusEl) {
+                statusEl.innerText = 'Server Starting...';
+                statusEl.style.color = '#10b981';
+            }
         }
     },
 
@@ -983,60 +1120,106 @@ const App = {
         const v = this.state.vetoState;
         if (!v) return;
 
-        const myId = Auth.getUserId();
-        
-        let statusText = 'Waiting...';
-        if (v.status === 'InProgress' || v.status === 0) { // InProgress
-            const isMyTurn = (v.currentTurnTeam === 1 && v.team1.some(p => p.playerId === myId)) || 
-                             (v.currentTurnTeam === 2 && v.team2.some(p => p.playerId === myId));
-            statusText = isMyTurn ? 'YOUR TURN TO VETO' : "OPPONENT'S TURN";
-            document.getElementById('veto-status-text').style.color = isMyTurn ? '#10b981' : '#f59e0b';
-        } else if (v.status === 'Completed' || v.status === 1) { // Completed
-            statusText = 'Server Starting...';
-            document.getElementById('veto-status-text').style.color = '#10b981';
+        const myId = (Auth.getUserId() || '').toLowerCase();
+        const turnPlayerId = (v.currentVetoTurnPlayerId || v.CurrentVetoTurnPlayerId || '').toLowerCase();
+        const currentTurnTeam = v.currentTurnTeam ?? v.CurrentTurnTeam;
+        const team1 = v.team1 || v.Team1 || [];
+        const team2 = v.team2 || v.Team2 || [];
+        const status = v.status ?? v.Status;
+
+        let isMyTurn = false;
+        if (turnPlayerId) {
+            isMyTurn = (turnPlayerId === myId);
+        } else if (currentTurnTeam === 1) {
+            isMyTurn = team1.some(p => ((p.playerId || p.PlayerId || p.id || p.Id || '')).toLowerCase() === myId);
+        } else if (currentTurnTeam === 2) {
+            isMyTurn = team2.some(p => ((p.playerId || p.PlayerId || p.id || p.Id || '')).toLowerCase() === myId);
         }
 
-        document.getElementById('veto-status-text').innerText = statusText;
+        const isProgress = (status === 'InProgress' || status === 0);
+        const isCompleted = (status === 'Completed' || status === 1);
+
+        const statusEl = document.getElementById('veto-status-text');
+        if (statusEl) {
+            if (isProgress) {
+                statusEl.innerText = isMyTurn ? 'YOUR TURN TO VETO' : "OPPONENT'S TURN";
+                statusEl.style.color = isMyTurn ? '#10b981' : '#f59e0b';
+            } else if (isCompleted) {
+                statusEl.innerText = 'Server Starting...';
+                statusEl.style.color = '#10b981';
+            } else {
+                statusEl.innerText = 'Waiting...';
+                statusEl.style.color = '#94a3b8';
+            }
+        }
         
         // Turn indicator styles
         const t1 = document.getElementById('veto-team1');
         const t2 = document.getElementById('veto-team2');
-        if (v.currentTurnTeam === 1 && (v.status === 'InProgress' || v.status === 0)) {
-            t1.classList.add('opacity-100'); t1.classList.remove('opacity-40');
-            t2.classList.add('opacity-40'); t2.classList.remove('opacity-100');
-        } else if (v.currentTurnTeam === 2 && (v.status === 'InProgress' || v.status === 0)) {
-            t1.classList.add('opacity-40'); t1.classList.remove('opacity-100');
-            t2.classList.add('opacity-100'); t2.classList.remove('opacity-40');
-        } else {
-            t1.classList.add('opacity-100'); t2.classList.add('opacity-100');
-            t1.classList.remove('opacity-40'); t2.classList.remove('opacity-40');
+        if (t1 && t2) {
+            if (currentTurnTeam === 1 && isProgress) {
+                t1.classList.add('opacity-100'); t1.classList.remove('opacity-40');
+                t2.classList.add('opacity-40'); t2.classList.remove('opacity-100');
+            } else if (currentTurnTeam === 2 && isProgress) {
+                t1.classList.add('opacity-40'); t1.classList.remove('opacity-100');
+                t2.classList.add('opacity-100'); t2.classList.remove('opacity-40');
+            } else {
+                t1.classList.add('opacity-100'); t2.classList.add('opacity-100');
+                t1.classList.remove('opacity-40'); t2.classList.remove('opacity-40');
+            }
         }
         
         const mapsGrid = document.getElementById('veto-maps-grid');
-        mapsGrid.innerHTML = v.maps.map(m => {
-            const isBanned = m.isBanned;
-            const isSelected = (v.status === 'Completed' || v.status === 1) && !isBanned;
-            let styles = "relative rounded-xl overflow-hidden cursor-pointer transition-all border-2 ";
-            let innerStyles = "";
+        if (!mapsGrid) return;
+
+        // FACEIT: Lock or unlock the entire grid container based on whether it is genuinely my turn
+        if (isMyTurn && isProgress) {
+            mapsGrid.classList.remove('veto-locked');
+            mapsGrid.style.pointerEvents = 'auto';
+        } else {
+            mapsGrid.classList.add('veto-locked');
+            mapsGrid.style.pointerEvents = 'none';
+        }
+
+        const maps = v.maps || v.Maps || [];
+        mapsGrid.innerHTML = maps.map(m => {
+            const isBanned = m.isBanned ?? m.IsBanned ?? false;
+            const isSelected = isCompleted && !isBanned;
+            const mapName = m.name || m.Name || '';
+            const safeMapName = Utils.escapeHtml(mapName);
+
+            let styles = "relative rounded-xl overflow-hidden transition-all border-2 select-none ";
+            let innerStyles = "background: linear-gradient(0deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 100%);";
             let overlay = "";
+            let clickHandler = "";
 
             if (isBanned) {
-                styles += "border-danger/30 opacity-50 grayscale";
-                overlay = `<div class="absolute inset-0 bg-danger/20 flex flex-col items-center justify-center">
-                    <span class="text-4xl drop-shadow-md">❌</span>
+                styles += "border-danger/30 opacity-40 grayscale cursor-not-allowed";
+                overlay = `<div class="map-overlay absolute inset-0 bg-danger/25 flex flex-col items-center justify-center pointer-events-none z-10">
+                    <div class="w-10 h-10 rounded-full bg-danger/20 border border-danger/40 flex items-center justify-center mb-1">
+                        <svg class="w-5 h-5 text-danger" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </div>
+                    <span class="font-display font-black text-danger text-xs uppercase tracking-widest bg-black/75 px-2.5 py-1 rounded border border-danger/30">BANNED</span>
                 </div>`;
             } else if (isSelected) {
-                styles += "border-safe transform scale-[1.03] shadow-[0_0_25px_rgba(16,185,129,0.5)] z-10";
-                overlay = `<div class="absolute inset-0 bg-safe/10 flex flex-col items-center justify-center">
-                    <span class="text-4xl drop-shadow-[0_0_10px_rgba(16,185,129,0.8)]">⚔️</span>
-                    <span class="font-display font-black text-white bg-black/50 px-3 py-1 rounded text-xs mt-2 uppercase tracking-widest text-safe border border-safe/30 backdrop-blur-sm shadow-xl">Selected Map</span>
+                styles += "border-safe transform scale-[1.03] shadow-[0_0_25px_rgba(16,185,129,0.5)] z-10 cursor-default";
+                overlay = `<div class="map-overlay absolute inset-0 bg-safe/15 flex flex-col items-center justify-center pointer-events-none z-10">
+                    <div class="w-10 h-10 rounded-full bg-safe/20 border border-safe/40 flex items-center justify-center mb-1">
+                        <svg class="w-5 h-5 text-safe" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                    </div>
+                    <span class="font-display font-black text-white bg-black/70 px-3 py-1 rounded text-xs uppercase tracking-widest text-safe border border-safe/40 backdrop-blur-sm shadow-xl">SELECTED MAP</span>
                 </div>`;
+            } else if (!isMyTurn) {
+                styles += "border-app-border opacity-60 cursor-not-allowed";
             } else {
-                styles += "border-app-border hover:border-brand hover:-translate-y-1";
-                innerStyles = "background: linear-gradient(0deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);";
+                styles += "border-app-border hover:border-danger hover:scale-[1.02] active:scale-95 cursor-pointer group shadow-lg";
+                overlay = `<div class="map-overlay absolute inset-0 bg-danger/0 group-hover:bg-danger/25 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none z-10">
+                    <span class="font-display font-black text-white bg-danger/90 px-4 py-1.5 rounded-lg text-xs uppercase tracking-widest shadow-xl transform scale-90 group-hover:scale-100 transition-all pointer-events-none">BAN MAP</span>
+                </div>`;
+                clickHandler = `onclick="App.vetoMapClick('${safeMapName}')"`;
             }
 
-            const mapNamesMap = {
+            const mapNamesMap = window.APP_CONFIG?.MAP_IMAGES || {
                 'Mirage': 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=400&h=300&auto=format&fit=crop',
                 'Inferno': 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=400&h=300&auto=format&fit=crop',
                 'Dust2': 'https://images.unsplash.com/photo-1627850854446-c22bebb6e3ad?q=80&w=400&h=300&auto=format&fit=crop',
@@ -1045,13 +1228,13 @@ const App = {
                 'Vertigo': 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=400&h=300&auto=format&fit=crop',
                 'Ancient': 'https://images.unsplash.com/photo-1590845947376-2638caa89309?q=80&w=400&h=300&auto=format&fit=crop'
             };
-            const bgUrl = mapNamesMap[m.name] || 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=400&h=300&auto=format&fit=crop'; 
+            const bgUrl = mapNamesMap[mapName] || 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=400&h=300&auto=format&fit=crop'; 
 
             return `
-                <div class="${styles}" onclick="App.vetoMapClick('${m.name}')" style="aspect-ratio: 4/3; background-image: url('${bgUrl}'); background-size: cover; background-position: center;">
+                <div class="${styles}" data-map-name="${safeMapName}" ${clickHandler} style="aspect-ratio: 4/3; background-image: url('${bgUrl}'); background-size: cover; background-position: center;">
                     ${overlay}
-                    <div class="absolute inset-0 flex items-end p-4" style="${innerStyles}">
-                        <span class="font-display font-black text-xl text-white uppercase tracking-wider drop-shadow-md">${m.name}</span>
+                    <div class="absolute inset-0 flex items-end p-4 pointer-events-none" style="${innerStyles}">
+                        <span class="font-display font-black text-xl text-white uppercase tracking-wider drop-shadow-md pointer-events-none">${safeMapName}</span>
                     </div>
                 </div>
             `;
@@ -1059,11 +1242,79 @@ const App = {
     },
 
     async vetoMapClick(mapName) {
-        if (!this.state.vetoState || (this.state.vetoState.status !== 'InProgress' && this.state.vetoState.status !== 0)) return;
+        const v = this.state.vetoState;
+        const status = v ? (v.status ?? v.Status) : null;
+        if (!v || (status !== 'InProgress' && status !== 0)) return;
+
+        // Double check turn
+        const myId = (Auth.getUserId() || '').toLowerCase();
+        const turnPlayerId = (v.currentVetoTurnPlayerId || v.CurrentVetoTurnPlayerId || '').toLowerCase();
+        const currentTurnTeam = v.currentTurnTeam ?? v.CurrentTurnTeam;
+        const team1 = v.team1 || v.Team1 || [];
+        const team2 = v.team2 || v.Team2 || [];
+
+        let isMyTurn = false;
+        if (turnPlayerId) {
+            isMyTurn = (turnPlayerId === myId);
+        } else if (currentTurnTeam === 1) {
+            isMyTurn = team1.some(p => ((p.playerId || p.PlayerId || p.id || p.Id || '')).toLowerCase() === myId);
+        } else if (currentTurnTeam === 2) {
+            isMyTurn = team2.some(p => ((p.playerId || p.PlayerId || p.id || p.Id || '')).toLowerCase() === myId);
+        }
+
+        if (!isMyTurn) {
+            Utils.showToast("Wait for your turn to ban a map!", 'info', 2000);
+            return;
+        }
+
+        const matchId = this.state.currentMatchId || v.matchId || v.MatchId;
+        if (!matchId) return;
+
+        const maps = v.maps || v.Maps || [];
+        const mapObj = maps.find(m => (m.name || m.Name || '').toLowerCase() === mapName.toLowerCase());
+        if (!mapObj || mapObj.isBanned || mapObj.IsBanned) return;
+
+        const actualName = mapObj.name || mapObj.Name || mapName;
+
+        // ─────────────────────────────────────────────────────────────────
+        // FACEIT ARCHITECTURE:
+        // 1. Synchronously lock the entire grid to prevent ANY click on another map.
+        // 2. Transition ONLY the clicked card into immediate "Banning..." visual state in-place.
+        // ─────────────────────────────────────────────────────────────────
+        const mapsGrid = document.getElementById('veto-maps-grid');
+        if (mapsGrid) {
+            mapsGrid.classList.add('veto-locked');
+            mapsGrid.style.pointerEvents = 'none';
+        }
+
+        const cardEl = document.querySelector(`[data-map-name="${actualName}"]`);
+        if (cardEl) {
+            cardEl.classList.add('border-danger', 'scale-[0.98]', 'opacity-80');
+            const overlayEl = cardEl.querySelector('.map-overlay');
+            if (overlayEl) {
+                overlayEl.className = 'map-overlay absolute inset-0 bg-danger/35 flex flex-col items-center justify-center z-10 pointer-events-none opacity-100';
+                overlayEl.innerHTML = `
+                    <div class="w-10 h-10 rounded-full bg-danger/20 border border-danger/40 flex items-center justify-center mb-1 animate-pulse">
+                        <svg class="w-5 h-5 text-danger" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </div>
+                    <span class="font-display font-black text-danger text-xs uppercase tracking-widest bg-black/80 px-2.5 py-1 rounded border border-danger/40">BANNING...</span>
+                `;
+            }
+        }
+
+        Utils.playNotificationSound();
+
         try {
-            await Api.vetoMap(this.state.currentMatchId, mapName);
+            const res = await Api.vetoMap(matchId, actualName);
+            const updatedVeto = res?.vetoState || res?.VetoState;
+            if (updatedVeto) {
+                this.onMapVetoUpdated(updatedVeto);
+            }
         } catch (error) {
-            Utils.showToast(error.message, 'error');
+            console.error("Veto failed:", error);
+            Utils.showToast(error.message || 'Failed to ban map. Please try again.', 'error');
+            // Re-render UI to restore original state and unlock
+            this.renderMapVetoUI();
         }
     }
 };

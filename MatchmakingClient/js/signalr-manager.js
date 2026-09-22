@@ -2,16 +2,30 @@ const SignalRManager = {
     connection: null,
     
     init() {
-        if (!Auth.isLoggedIn()) return;
+        if (!window.Auth || !window.Auth.isLoggedIn()) return;
         
-        const token = Auth.getToken();
-        // Base API URL is like http://.../api, so we replace '/api' with '/hubs/matchmaking'
-        const hubUrl = API_URL.replace('/api', '/hubs/matchmaking');
+        const token = window.Auth.getToken();
+        const hubUrl = (window.APP_CONFIG && window.APP_CONFIG.HUB_URL)
+            ? window.APP_CONFIG.HUB_URL
+            : (window.API_URL || (window.Api ? window.Api.getBaseUrl() : '')).replace('/api', '/hubs/matchmaking');
         
         this.connection = new signalR.HubConnectionBuilder()
             .withUrl(hubUrl, { accessTokenFactory: () => token })
-            .withAutomaticReconnect()
+            .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
             .build();
+
+        this.connection.onreconnecting((error) => {
+            console.warn('SignalR reconnecting:', error);
+            if (window.Utils) window.Utils.showToast('Reconnecting to server...', 'info', 2000);
+        });
+
+        this.connection.onreconnected((connectionId) => {
+            console.log('SignalR reconnected:', connectionId);
+            if (window.Utils) window.Utils.showToast('Reconnected to server!', 'success', 2000);
+            if (window.App && typeof window.App.updateMatchmakingStatus === 'function') {
+                window.App.updateMatchmakingStatus();
+            }
+        });
             
         // Event handlers
         this.connection.on('MatchFound', (matchId) => {

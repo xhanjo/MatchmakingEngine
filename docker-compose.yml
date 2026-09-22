@@ -9,9 +9,9 @@ services:
   postgres:
     image: postgres:15
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 1512
-      POSTGRES_DB: MatchmakingDb
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-MatchmakingDb}
     ports:
       - "5432:5432"
     volumes:
@@ -25,9 +25,9 @@ services:
       - "5001:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=MatchmakingDb;Username=postgres;Password=1512
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=${POSTGRES_DB:-MatchmakingDb};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}
       - Redis__Configuration=redis:6379
-      - Jwt__Key=ThisIsMySuperSecretKeyForJwtTokens123! 
+      - Jwt__Key=${JWT_KEY:-ThisIsMySuperSecretKeyForJwtTokens123!}
     depends_on:
       - postgres
       - redis
@@ -40,13 +40,22 @@ services:
       - "5002:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=MatchmakingDb;Username=postgres;Password=1512
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=${POSTGRES_DB:-MatchmakingDb};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}
       - Redis__Configuration=redis:6379
-      - Jwt__Key=ThisIsMySuperSecretKeyForJwtTokens123!
+      - Jwt__Key=${JWT_KEY:-ThisIsMySuperSecretKeyForJwtTokens123!}
       - RunMatchmakingWorker=false 
     depends_on:
       - postgres
       - redis
+
+  frontend:
+    build:
+      context: ./MatchmakingClient
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - api1
 
 volumes:
   pgdata:

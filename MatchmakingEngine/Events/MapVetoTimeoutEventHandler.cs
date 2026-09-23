@@ -35,6 +35,15 @@ public class MapVetoTimeoutEventHandler : INotificationHandler<MapVetoTimeoutEve
             {
                 await _hubContext.Clients.Group(pid.ToString()).SendAsync("MapVetoUpdated", result.VetoState, cancellationToken: cancellationToken);
             }
+
+            if (result.VetoState.Status == "Completed")
+            {
+                var chosenMap = result.VetoState.Maps.FirstOrDefault(m => !m.IsBanned)?.Name;
+                foreach (var pid in result.PlayerIds)
+                {
+                    await _hubContext.Clients.Group(pid.ToString()).SendAsync("MatchStarting", chosenMap, cancellationToken: cancellationToken);
+                }
+            }
         }
     }
 }

@@ -64,17 +64,33 @@ public class BanMapCommandHandler : IRequestHandler<BanMapCommand, BanMapResult>
         }
         else
         {
-            var team1Captain = match.Players.FirstOrDefault(p => p.Team == 1 && p.IsCaptain)?.PlayerId;
-            var team2Captain = match.Players.FirstOrDefault(p => p.Team == 2 && p.IsCaptain)?.PlayerId;
+            var team1Captain = match.Players.FirstOrDefault(p => p.Team == 1 && p.IsCaptain)?.PlayerId
+                ?? match.Players.FirstOrDefault(p => p.Team == 1)?.PlayerId;
+            var team2Captain = match.Players.FirstOrDefault(p => p.Team == 2 && p.IsCaptain)?.PlayerId
+                ?? match.Players.FirstOrDefault(p => p.Team == 2)?.PlayerId;
 
-            match.CurrentVetoTurnPlayerId = (request.PlayerId == team1Captain) ? team2Captain : team1Captain;
-            match.VetoDeadLine = DateTimeOffset.UtcNow.AddSeconds(30);
+            var nextPlayer = (request.PlayerId == team1Captain) ? team2Captain : team1Captain;
 
-            var jobId = _backgroundJobService.Schedule<IMediator>(
-                m => m.Publish(new MapVetoTimeoutEvent(match.Id, match.CurrentVetoTurnPlayerId!.Value), CancellationToken.None),
-                TimeSpan.FromSeconds(30));
-                
-            match.AssignVetoJobId(jobId);
+            if (nextPlayer == null)
+            {
+                _logger.LogError("[MAP VETO] Could not determine next veto turn player for match {MatchId}. Selecting remaining map.", match.Id);
+                match.Status = Domain.MatchStatus.StartingServer;
+                match.SelectedMap = match.AvailableMaps[0];
+                match.CurrentVetoTurnPlayerId = null;
+                match.VetoDeadLine = null;
+                match.ClearVetoJobId();
+            }
+            else
+            {
+                match.CurrentVetoTurnPlayerId = nextPlayer;
+                match.VetoDeadLine = DateTimeOffset.UtcNow.AddSeconds(30);
+
+                var jobId = _backgroundJobService.Schedule<IMediator>(
+                    m => m.Publish(new MapVetoTimeoutEvent(match.Id, match.CurrentVetoTurnPlayerId!.Value), CancellationToken.None),
+                    TimeSpan.FromSeconds(30));
+                    
+                match.AssignVetoJobId(jobId);
+            }
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);

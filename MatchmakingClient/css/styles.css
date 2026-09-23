@@ -8,17 +8,6 @@
     100% { box-shadow: 0 0 0 0   rgba(99, 102, 241, 0); }
 }
 
-@keyframes pulse-match {
-    0%, 100% {
-        border-color: #10b981;
-        transform: scale(1);
-    }
-    50% {
-        border-color: #34d399;
-        transform: scale(1.015);
-    }
-}
-
 @keyframes slide-in {
     from { transform: translateX(110%); opacity: 0; }
     to   { transform: translateX(0);    opacity: 1; }
@@ -46,23 +35,20 @@
     stroke-width: 8;
     stroke-linecap: round;
 }
-.timer-circle .bg-stroke      { stroke: rgba(255,255,255,0.08); }
+.timer-circle .bg-stroke       { stroke: rgba(255,255,255,0.08); }
 .timer-circle .progress-stroke {
     stroke: #10b981;
     stroke-dasharray: 283;
     stroke-dashoffset: 0;
-    will-change: stroke-dashoffset;
 }
 
 /* ============================================
-   MODAL OVERLAY (GPU-accelerated)
+   MODAL OVERLAY (Zero GPU overhead, 60fps)
    ============================================ */
 .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(7, 10, 19, 0.90);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    background: rgba(5, 7, 13, 0.92);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -70,26 +56,23 @@
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.2s ease, visibility 0.2s ease;
-    will-change: opacity;
 }
 .modal-overlay.active {
     opacity: 1;
     visibility: visible;
 }
 .modal-card {
-    transform: scale(0.92) translateY(8px);
-    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-    will-change: transform;
+    transform: scale(0.95);
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .modal-overlay.active .modal-card {
-    transform: scale(1) translateY(0) !important;
+    transform: scale(1);
 }
 
-/* Match Found card pulsing border (GPU-accelerated, no heavy box-shadow repaints) */
+/* Match Found card (Crisp static esports styling, no continuous animation) */
 .match-modal-card {
-    box-shadow: 0 0 35px rgba(16, 185, 129, 0.35);
-    animation: pulse-match 2s ease-in-out infinite;
-    will-change: transform, border-color;
+    border: 2px solid #10b981 !important;
+    box-shadow: 0 0 50px rgba(16, 185, 129, 0.25), 0 20px 40px rgba(0, 0, 0, 0.6) !important;
 }
 
 /* ============================================

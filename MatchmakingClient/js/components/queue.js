@@ -189,22 +189,31 @@ const QueueComponent = {
 
         // Reset + start timer
         const circle = document.querySelector('.timer-circle .progress-stroke');
+        let timeLeft = 30;
+        const totalTime = 30;
+        const circumference = 283;
+
         if (circle) {
             circle.style.transition = 'none';
             circle.style.strokeDashoffset = '0';
-            setTimeout(() => {
-                circle.style.transition = 'stroke-dashoffset 30s linear, stroke 0.3s';
-                circle.style.strokeDashoffset = '283';
-            }, 50);
+            circle.style.stroke = '#10b981';
         }
 
-        let timeLeft = 30;
         const timerText = document.getElementById('timer-text');
         if (timerText) timerText.innerText = timeLeft;
+
         clearInterval(Store.state.matchTimer);
         Store.state.matchTimer = setInterval(() => {
             timeLeft--;
             if (timerText) timerText.innerText = timeLeft;
+            if (circle) {
+                const offset = circumference * (1 - timeLeft / totalTime);
+                circle.style.transition = 'stroke-dashoffset 1s linear, stroke 0.3s';
+                circle.style.strokeDashoffset = offset;
+                if (timeLeft <= 10) {
+                    circle.style.stroke = '#ef4444';
+                }
+            }
             if (timeLeft <= 0) {
                 clearInterval(Store.state.matchTimer);
                 this.closeMatchModal();
@@ -337,6 +346,13 @@ const QueueComponent = {
 
     closeMatchModal() {
         clearInterval(Store.state.matchTimer);
+        const circle = document.querySelector('.timer-circle .progress-stroke');
+        if (circle) {
+            circle.style.transition = 'none';
+            circle.style.strokeDashoffset = '0';
+            circle.style.stroke = '#10b981';
+        }
+
         const modal = document.getElementById('match-modal');
         if (modal) modal.classList.remove('active');
 

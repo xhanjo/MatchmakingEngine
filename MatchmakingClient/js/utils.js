@@ -26,11 +26,16 @@ const Utils = {
         }, duration);
     },
 
+    _audioCtx: null,
+
     playNotificationSound() {
         try {
             const AudioContextClass = window.AudioContext || window.webkitAudioContext;
             if (!AudioContextClass) return;
-            const audioCtx = new AudioContextClass();
+            if (!this._audioCtx || this._audioCtx.state === 'closed') {
+                this._audioCtx = new AudioContextClass();
+            }
+            const audioCtx = this._audioCtx;
             if (audioCtx.state === 'suspended') {
                 audioCtx.resume();
             }
@@ -41,13 +46,13 @@ const Utils = {
             oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // A5
             
             gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.5);
+            gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.35);
             
             oscillator.connect(gainNode);
             gainNode.connect(audioCtx.destination);
             
             oscillator.start();
-            oscillator.stop(audioCtx.currentTime + 0.5);
+            oscillator.stop(audioCtx.currentTime + 0.35);
         } catch (e) {
             console.warn("Audio play failed or was blocked by autoplay policy:", e);
         }

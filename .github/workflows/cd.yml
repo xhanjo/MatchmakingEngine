@@ -16,30 +16,28 @@ jobs:
     steps:
     - name: Deploy to EC2 via Native OpenSSH
       env:
-        RAW_HOST: ${{ secrets.EC2_HOST }}
         RAW_KEY: ${{ secrets.EC2_SSH_KEY }}
       run: |
-        # Strip any hidden whitespaces, \r, or \n from the host secret
-        CLEAN_HOST=$(echo "$RAW_HOST" | tr -d '[:space:]')
-        
-        if [ -z "$CLEAN_HOST" ]; then
-          echo "::error::EC2_HOST secret is empty! Please check GitHub Secrets."
+        # Hardcode the known Elastic IP so no secret typos/masks can break the host
+        TARGET_HOST="13.50.190.113"
+        echo "Connecting to EC2 at $TARGET_HOST on port 22..."
+
+        if [ -z "$RAW_KEY" ]; then
+          echo "::error::EC2_SSH_KEY secret is empty! Please check GitHub Secrets."
           exit 1
         fi
 
-        echo "Connecting to EC2 instance..."
-        
         # Setup SSH directory and write private key cleanly
         mkdir -p ~/.ssh
         echo "$RAW_KEY" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
-        
-        # Use native OpenSSH with verbose logging and auto-retry
-        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=15 -i ~/.ssh/id_rsa ubuntu@"$CLEAN_HOST" "
+
+        # Run native OpenSSH with verbose logging (-v) and 30s timeout
+        ssh -v -o StrictHostKeyChecking=no -o ConnectTimeout=30 -i ~/.ssh/id_rsa ubuntu@"$TARGET_HOST" '
           set -e
-          echo '=== Connected successfully to EC2 ==='
+          echo "=== Connected successfully to EC2 ==="
           cd ~/MatchmakingEngine
           git pull origin main
           docker compose up -d --build
-          echo '=== Deployment finished successfully! ==='
-        "
+          echo "=== Deployment finished successfully! ==="
+        '

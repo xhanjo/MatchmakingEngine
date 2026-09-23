@@ -103,6 +103,10 @@ const QueueComponent = {
             btn.innerText = 'MATCH FOUND';
             btn.disabled = true;
             statusText.innerText = 'Waiting for all players to accept…';
+            if (Store.searchTimerInterval) {
+                clearInterval(Store.searchTimerInterval);
+                Store.searchTimerInterval = null;
+            }
         } else if (Store.state.status === 'InGame' || Store.state.status === 'Accepted') {
             btn.classList.add('find-match-idle');
             btn.innerText = 'MATCH IN PROGRESS';
@@ -168,6 +172,11 @@ const QueueComponent = {
     },
 
     onMatchFound(matchId) {
+        if (Store.searchTimerInterval) {
+            clearInterval(Store.searchTimerInterval);
+            Store.searchTimerInterval = null;
+        }
+
         Store.state.currentMatchId = matchId;
         Store.state.status = 'MatchFound';
         this.renderMatchmakingButton();

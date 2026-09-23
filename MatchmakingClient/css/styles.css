@@ -9,8 +9,14 @@
 }
 
 @keyframes pulse-match {
-    0%, 100% { box-shadow: 0 0 30px rgba(16, 185, 129, 0.35), inset 0 0 0 2px #10b981; }
-    50%       { box-shadow: 0 0 70px rgba(16, 185, 129, 0.65), inset 0 0 0 2px #10b981; }
+    0%, 100% {
+        border-color: #10b981;
+        transform: scale(1);
+    }
+    50% {
+        border-color: #34d399;
+        transform: scale(1.015);
+    }
 }
 
 @keyframes slide-in {
@@ -45,25 +51,26 @@
     stroke: #10b981;
     stroke-dasharray: 283;
     stroke-dashoffset: 0;
-    transition: stroke-dashoffset 1s linear, stroke 0.3s;
+    will-change: stroke-dashoffset;
 }
 
 /* ============================================
-   MODAL OVERLAY (transition only - structure in HTML/TW)
+   MODAL OVERLAY (GPU-accelerated)
    ============================================ */
 .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.88);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: rgba(7, 10, 19, 0.90);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 9999;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.25s ease, visibility 0.25s ease;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+    will-change: opacity;
 }
 .modal-overlay.active {
     opacity: 1;
@@ -71,15 +78,18 @@
 }
 .modal-card {
     transform: scale(0.92) translateY(8px);
-    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    will-change: transform;
 }
 .modal-overlay.active .modal-card {
     transform: scale(1) translateY(0) !important;
 }
 
-/* Match Found card pulsing border */
+/* Match Found card pulsing border (GPU-accelerated, no heavy box-shadow repaints) */
 .match-modal-card {
+    box-shadow: 0 0 35px rgba(16, 185, 129, 0.35);
     animation: pulse-match 2s ease-in-out infinite;
+    will-change: transform, border-color;
 }
 
 /* ============================================

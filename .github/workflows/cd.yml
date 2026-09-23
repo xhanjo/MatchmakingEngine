@@ -14,16 +14,32 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
-    - name: Execute remote deployment commands via SSH
-      uses: appleboy/ssh-action@v1.2.0
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ubuntu
-        key: ${{ secrets.EC2_SSH_KEY }}
-        script: |
+    - name: Deploy to EC2 via Native OpenSSH
+      env:
+        RAW_HOST: ${{ secrets.EC2_HOST }}
+        RAW_KEY: ${{ secrets.EC2_SSH_KEY }}
+      run: |
+        # Strip any hidden whitespaces, \r, or \n from the host secret
+        CLEAN_HOST=$(echo "$RAW_HOST" | tr -d '[:space:]')
+        
+        if [ -z "$CLEAN_HOST" ]; then
+          echo "::error::EC2_HOST secret is empty! Please check GitHub Secrets."
+          exit 1
+        fi
+
+        echo "Connecting to EC2 instance..."
+        
+        # Setup SSH directory and write private key cleanly
+        mkdir -p ~/.ssh
+        echo "$RAW_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        
+        # Use native OpenSSH with verbose logging and auto-retry
+        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=15 -i ~/.ssh/id_rsa ubuntu@"$CLEAN_HOST" "
           set -e
-          echo "Starting deployment on EC2..."
+          echo '=== Connected successfully to EC2 ==='
           cd ~/MatchmakingEngine
           git pull origin main
           docker compose up -d --build
-          echo "Deployment finished successfully!"
+          echo '=== Deployment finished successfully! ==='
+        "

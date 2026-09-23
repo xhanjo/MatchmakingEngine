@@ -1,51 +1,29 @@
-name: .NET CD (Deploy to AWS)
+name: CD (Deploy to EC2)
 
 on:
   workflow_run:
     workflows: [".NET CI"]
     types:
       - completed
+    branches: [ "main" ]
 
 jobs:
   deploy:
-    name: Deploy to Elastic Beanstalk
+    name: Deploy to EC2
     runs-on: ubuntu-latest
-    # Disabled: application migrated to standalone EC2 with Docker Compose
-    if: false
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
-
-    - name: Setup .NET 10
-      uses: actions/setup-dotnet@v4
+    - name: Execute remote deployment commands via SSH
+      uses: appleboy/ssh-action@v1.2.0
       with:
-        dotnet-version: '10.0.x'
-
-    - name: Publish App
-      run: dotnet publish MatchmakingEngine/MatchmakingEngine.csproj -c Release -o ./publish
-
-    - name: Create Production Dockerfile
-      run: |
-        echo 'FROM mcr.microsoft.com/dotnet/aspnet:10.0' > ./publish/Dockerfile
-        echo 'WORKDIR /app' >> ./publish/Dockerfile
-        echo 'EXPOSE 8080' >> ./publish/Dockerfile
-        echo 'COPY . .' >> ./publish/Dockerfile
-        echo 'ENTRYPOINT ["dotnet", "MatchmakingEngine.dll"]' >> ./publish/Dockerfile
-
-    - name: Prepare Deployment Package
-      run: |
-        cd publish
-        zip -r ../deploy.zip .
-        cd ..
-
-    - name: Deploy to Elastic Beanstalk
-      uses: einaregilsson/beanstalk-deploy@v22
-      with:
-        aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        application_name: matchmaking-engine
-        environment_name: Matchmaking-engine-env
-        version_label: ${{ github.sha }}
-        region: eu-north-1
-        deployment_package: deploy.zip
+        host: ${{ secrets.EC2_HOST }}
+        username: ubuntu
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          set -e
+          echo "Starting deployment on EC2..."
+          cd ~/MatchmakingEngine
+          git pull origin main
+          docker compose up -d --build
+          echo "Deployment finished successfully!"

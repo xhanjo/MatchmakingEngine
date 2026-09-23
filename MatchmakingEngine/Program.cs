@@ -63,6 +63,7 @@ builder.Services.AddScoped<IPartyRepository, PartyRepository>();
 builder.Services.AddScoped<IJwtProvider, JwtProvider>();
 builder.Services.AddScoped<IBackgroundJobService, HangfireJobService>();
 builder.Services.AddSingleton<ILeaderboardService, LeaderboardService>();
+builder.Services.AddSingleton<IDistributedLockService, RedisDistributedLockService>();
 
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? throw new InvalidOperationException("JWT:Issuer is missing in configuration.");
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? throw new InvalidOperationException("JWT:Audience is missing in configuration.");

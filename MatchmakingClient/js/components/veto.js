@@ -1,4 +1,4 @@
-// components/veto.js - Map Veto Phase controller (turns, timer, grid rendering, FaceIt 1-click ban)
+// components/veto.js - Map Veto Phase controller (turns, timer, in-place DOM updates, FaceIt 1-click ban)
 
 const VetoComponent = {
     onMatchReadyForVeto(vetoState) {
@@ -9,6 +9,7 @@ const VetoComponent = {
         const logContainer = document.getElementById('veto-log');
         if (logContainer) logContainer.innerHTML = '';
         Store._loggedBans = new Set();
+        Store._isBanning = false;
 
         Store.state.status = 'Veto';
         Store.state.currentMatchId = vetoState.matchId || vetoState.MatchId;
@@ -22,6 +23,10 @@ const VetoComponent = {
         const t2 = document.querySelector('#veto-team2 .team-name');
         if (t1) t1.innerText = team1;
         if (t2) t2.innerText = team2;
+
+        // Force fresh card layout on new match room enter
+        const mapsGrid = document.getElementById('veto-maps-grid');
+        if (mapsGrid) mapsGrid.innerHTML = '';
         
         this.renderMapVetoUI();
         this.startVetoTimer(30);
@@ -51,6 +56,9 @@ const VetoComponent = {
     },
 
     onMapVetoUpdated(vetoState) {
+        // Unlock client-side submitting lock
+        Store._isBanning = false;
+
         const prev = Store.state.vetoState;
         const previousTurnTeam = prev ? (prev.currentTurnTeam ?? prev.CurrentTurnTeam ?? 1) : 1;
         
@@ -59,6 +67,7 @@ const VetoComponent = {
             Store.state.currentMatchId = vetoState.matchId || vetoState.MatchId;
         }
 
+        // In-place DOM update without destroying card nodes
         this.renderMapVetoUI();
 
         // Restart timer for next turn (if veto still in progress)
@@ -156,8 +165,7 @@ const VetoComponent = {
         if (!mapsGrid) return;
 
         // Visual indicator: dim the grid when it's not the player's turn
-        // but ALWAYS keep pointer-events enabled so clicks can reach handlers and show feedback
-        if (isMyTurn && isProgress) {
+        if (isMyTurn && isProgress && !Store._isBanning) {
             mapsGrid.classList.remove('veto-locked');
         } else {
             mapsGrid.classList.add('veto-locked');
@@ -165,68 +173,135 @@ const VetoComponent = {
         mapsGrid.style.pointerEvents = 'auto';
 
         const maps = v.maps || v.Maps || [];
-        mapsGrid.innerHTML = maps.map(m => {
-            const isBanned = m.isBanned ?? m.IsBanned ?? false;
-            const isSelected = isCompleted && !isBanned;
-            const mapName = m.name || m.Name || '';
-            const safeMapName = Utils.escapeHtml(mapName);
+        const existingCards = mapsGrid.querySelectorAll('[data-map-name]');
 
-            let styles = "relative rounded-xl overflow-hidden transition-all border-2 select-none ";
-            let innerStyles = "background: linear-gradient(0deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 100%);";
-            let overlay = "";
-            let clickHandler = "";
+        const mapNamesMap = window.APP_CONFIG?.MAP_IMAGES || {
+            'Mirage': 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=400&h=300&auto=format&fit=crop',
+            'Inferno': 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=400&h=300&auto=format&fit=crop',
+            'Dust2': 'https://images.unsplash.com/photo-1627850854446-c22bebb6e3ad?q=80&w=400&h=300&auto=format&fit=crop',
+            'Overpass': 'https://images.unsplash.com/photo-1498084393753-b411b2d26b34?q=80&w=400&h=300&auto=format&fit=crop',
+            'Nuke': 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=400&h=300&auto=format&fit=crop',
+            'Vertigo': 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=400&h=300&auto=format&fit=crop',
+            'Ancient': 'https://images.unsplash.com/photo-1590845947376-2638caa89309?q=80&w=400&h=300&auto=format&fit=crop'
+        };
 
-            if (isBanned) {
-                styles += "border-danger/30 opacity-40 grayscale cursor-not-allowed";
-                overlay = `<div class="map-overlay absolute inset-0 bg-danger/25 flex flex-col items-center justify-center pointer-events-none z-10">
-                    <div class="w-10 h-10 rounded-full bg-danger/20 border border-danger/40 flex items-center justify-center mb-1">
-                        <svg class="w-5 h-5 text-danger" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+        // ─────────────────────────────────────────────────────────────────
+        // IN-PLACE DOM MUTATION ARCHITECTURE:
+        // If cards are already mounted in DOM, NEVER destroy or replace them.
+        // Mutate their existing nodes in-place to prevent ghost/phantom clicks.
+        // ─────────────────────────────────────────────────────────────────
+        if (existingCards.length === 0 || existingCards.length !== maps.length) {
+            // First mount: construct cards once
+            mapsGrid.innerHTML = maps.map(m => {
+                const isBanned = m.isBanned ?? m.IsBanned ?? false;
+                const isSelected = isCompleted && !isBanned;
+                const mapName = m.name || m.Name || '';
+                const safeMapName = Utils.escapeHtml(mapName);
+                const bgUrl = mapNamesMap[mapName] || mapNamesMap['Mirage'];
+
+                let styles = "relative rounded-xl overflow-hidden transition-all border-2 select-none ";
+                let innerStyles = "background: linear-gradient(0deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 100%);";
+                let overlay = "";
+
+                if (isBanned) {
+                    styles += "border-danger/30 opacity-40 grayscale cursor-not-allowed";
+                    overlay = `<div class="map-overlay absolute inset-0 bg-danger/25 flex flex-col items-center justify-center pointer-events-none z-10">
+                        <div class="w-10 h-10 rounded-full bg-danger/20 border border-danger/40 flex items-center justify-center mb-1">
+                            <svg class="w-5 h-5 text-danger" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </div>
+                        <span class="font-display font-black text-danger text-xs uppercase tracking-widest bg-black/75 px-2.5 py-1 rounded border border-danger/30">BANNED</span>
+                    </div>`;
+                } else if (isSelected) {
+                    styles += "border-safe transform scale-[1.03] shadow-[0_0_25px_rgba(16,185,129,0.5)] z-10 cursor-default";
+                    overlay = `<div class="map-overlay absolute inset-0 bg-safe/15 flex flex-col items-center justify-center pointer-events-none z-10">
+                        <div class="w-10 h-10 rounded-full bg-safe/20 border border-safe/40 flex items-center justify-center mb-1">
+                            <svg class="w-5 h-5 text-safe" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                        </div>
+                        <span class="font-display font-black text-white bg-black/70 px-3 py-1 rounded text-xs uppercase tracking-widest text-safe border border-safe/40 backdrop-blur-sm shadow-xl">SELECTED MAP</span>
+                    </div>`;
+                } else if (!isMyTurn) {
+                    styles += "border-app-border opacity-60 cursor-not-allowed";
+                } else {
+                    styles += "border-app-border hover:border-danger hover:scale-[1.02] active:scale-95 cursor-pointer group shadow-lg";
+                    overlay = `<div class="map-overlay absolute inset-0 bg-danger/0 group-hover:bg-danger/25 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none z-10">
+                        <span class="font-display font-black text-white bg-danger/90 px-4 py-1.5 rounded-lg text-xs uppercase tracking-widest shadow-xl transform scale-90 group-hover:scale-100 transition-all pointer-events-none">BAN MAP</span>
+                    </div>`;
+                }
+
+                return `
+                    <div class="${styles}" data-map-name="${safeMapName}" onclick="App.vetoMapClick('${safeMapName}')" style="aspect-ratio: 4/3; background-image: url('${bgUrl}'); background-size: cover; background-position: center;">
+                        ${overlay}
+                        <div class="absolute inset-0 flex items-end p-4 pointer-events-none" style="${innerStyles}">
+                            <span class="font-display font-black text-xl text-white uppercase tracking-wider drop-shadow-md pointer-events-none">${safeMapName}</span>
+                        </div>
                     </div>
-                    <span class="font-display font-black text-danger text-xs uppercase tracking-widest bg-black/75 px-2.5 py-1 rounded border border-danger/30">BANNED</span>
-                </div>`;
-            } else if (isSelected) {
-                styles += "border-safe transform scale-[1.03] shadow-[0_0_25px_rgba(16,185,129,0.5)] z-10 cursor-default";
-                overlay = `<div class="map-overlay absolute inset-0 bg-safe/15 flex flex-col items-center justify-center pointer-events-none z-10">
-                    <div class="w-10 h-10 rounded-full bg-safe/20 border border-safe/40 flex items-center justify-center mb-1">
-                        <svg class="w-5 h-5 text-safe" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
-                    </div>
-                    <span class="font-display font-black text-white bg-black/70 px-3 py-1 rounded text-xs uppercase tracking-widest text-safe border border-safe/40 backdrop-blur-sm shadow-xl">SELECTED MAP</span>
-                </div>`;
-            } else if (!isMyTurn) {
-                styles += "border-app-border opacity-60 cursor-not-allowed";
-                // Still attach click handler so the player gets feedback ("Wait for your turn")
-                clickHandler = `onclick="App.vetoMapClick('${safeMapName}')"`;
-            } else {
-                styles += "border-app-border hover:border-danger hover:scale-[1.02] active:scale-95 cursor-pointer group shadow-lg";
-                overlay = `<div class="map-overlay absolute inset-0 bg-danger/0 group-hover:bg-danger/25 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none z-10">
-                    <span class="font-display font-black text-white bg-danger/90 px-4 py-1.5 rounded-lg text-xs uppercase tracking-widest shadow-xl transform scale-90 group-hover:scale-100 transition-all pointer-events-none">BAN MAP</span>
-                </div>`;
-                clickHandler = `onclick="App.vetoMapClick('${safeMapName}')"`;
-            }
+                `;
+            }).join('');
+        } else {
+            // Subsequent updates: mutate existing DOM cards in-place
+            maps.forEach(m => {
+                const mapName = m.name || m.Name || '';
+                const cardEl = mapsGrid.querySelector(`[data-map-name="${Utils.escapeHtml(mapName)}"]`);
+                if (!cardEl) return;
 
-            const mapNamesMap = window.APP_CONFIG?.MAP_IMAGES || {
-                'Mirage': 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=400&h=300&auto=format&fit=crop',
-                'Inferno': 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=400&h=300&auto=format&fit=crop',
-                'Dust2': 'https://images.unsplash.com/photo-1627850854446-c22bebb6e3ad?q=80&w=400&h=300&auto=format&fit=crop',
-                'Overpass': 'https://images.unsplash.com/photo-1498084393753-b411b2d26b34?q=80&w=400&h=300&auto=format&fit=crop',
-                'Nuke': 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=400&h=300&auto=format&fit=crop',
-                'Vertigo': 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=400&h=300&auto=format&fit=crop',
-                'Ancient': 'https://images.unsplash.com/photo-1590845947376-2638caa89309?q=80&w=400&h=300&auto=format&fit=crop'
-            };
-            const bgUrl = mapNamesMap[mapName] || 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=400&h=300&auto=format&fit=crop'; 
+                const isBanned = m.isBanned ?? m.IsBanned ?? false;
+                const isSelected = isCompleted && !isBanned;
 
-            return `
-                <div class="${styles}" data-map-name="${safeMapName}" ${clickHandler} style="aspect-ratio: 4/3; background-image: url('${bgUrl}'); background-size: cover; background-position: center;">
-                    ${overlay}
-                    <div class="absolute inset-0 flex items-end p-4 pointer-events-none" style="${innerStyles}">
-                        <span class="font-display font-black text-xl text-white uppercase tracking-wider drop-shadow-md pointer-events-none">${safeMapName}</span>
-                    </div>
-                </div>
-            `;
-        }).join('');
+                if (isBanned) {
+                    cardEl.className = "relative rounded-xl overflow-hidden transition-all border-2 select-none border-danger/30 opacity-40 grayscale cursor-not-allowed";
+                    let overlay = cardEl.querySelector('.map-overlay');
+                    if (!overlay) {
+                        overlay = document.createElement('div');
+                        cardEl.prepend(overlay);
+                    }
+                    overlay.className = "map-overlay absolute inset-0 bg-danger/25 flex flex-col items-center justify-center pointer-events-none z-10";
+                    overlay.innerHTML = `
+                        <div class="w-10 h-10 rounded-full bg-danger/20 border border-danger/40 flex items-center justify-center mb-1">
+                            <svg class="w-5 h-5 text-danger" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </div>
+                        <span class="font-display font-black text-danger text-xs uppercase tracking-widest bg-black/75 px-2.5 py-1 rounded border border-danger/30">BANNED</span>
+                    `;
+                } else if (isSelected) {
+                    cardEl.className = "relative rounded-xl overflow-hidden transition-all border-2 select-none border-safe transform scale-[1.03] shadow-[0_0_25px_rgba(16,185,129,0.5)] z-10 cursor-default";
+                    let overlay = cardEl.querySelector('.map-overlay');
+                    if (!overlay) {
+                        overlay = document.createElement('div');
+                        cardEl.prepend(overlay);
+                    }
+                    overlay.className = "map-overlay absolute inset-0 bg-safe/15 flex flex-col items-center justify-center pointer-events-none z-10";
+                    overlay.innerHTML = `
+                        <div class="w-10 h-10 rounded-full bg-safe/20 border border-safe/40 flex items-center justify-center mb-1">
+                            <svg class="w-5 h-5 text-safe" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                        </div>
+                        <span class="font-display font-black text-white bg-black/70 px-3 py-1 rounded text-xs uppercase tracking-widest text-safe border border-safe/40 backdrop-blur-sm shadow-xl">SELECTED MAP</span>
+                    `;
+                } else if (!isMyTurn) {
+                    cardEl.className = "relative rounded-xl overflow-hidden transition-all border-2 select-none border-app-border opacity-60 cursor-not-allowed";
+                    const overlay = cardEl.querySelector('.map-overlay');
+                    if (overlay) overlay.remove();
+                } else {
+                    cardEl.className = "relative rounded-xl overflow-hidden transition-all border-2 select-none border-app-border hover:border-danger hover:scale-[1.02] active:scale-95 cursor-pointer group shadow-lg";
+                    let overlay = cardEl.querySelector('.map-overlay');
+                    if (!overlay) {
+                        overlay = document.createElement('div');
+                        cardEl.prepend(overlay);
+                    }
+                    overlay.className = "map-overlay absolute inset-0 bg-danger/0 group-hover:bg-danger/25 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none z-10";
+                    overlay.innerHTML = `
+                        <span class="font-display font-black text-white bg-danger/90 px-4 py-1.5 rounded-lg text-xs uppercase tracking-widest shadow-xl transform scale-90 group-hover:scale-100 transition-all pointer-events-none">BAN MAP</span>
+                    `;
+                }
+            });
+        }
     },
 
     async vetoMapClick(mapName) {
+        // 1. Client-side reentrancy lock (prevent double/rapid clicks)
+        if (Store._isBanning) {
+            console.warn('[Veto] Already banning a map, ignoring click.');
+            return;
+        }
+
         const v = Store.state.vetoState;
         const status = v ? (v.status ?? v.Status) : null;
         if (!v || (status !== 'InProgress' && status !== 0)) {
@@ -234,7 +309,7 @@ const VetoComponent = {
             return;
         }
 
-        // Double check turn
+        // 2. Double check turn
         const myId = (Auth.getUserId() || '').toLowerCase();
         const turnPlayerId = (v.currentVetoTurnPlayerId || v.CurrentVetoTurnPlayerId || '').toLowerCase();
         const currentTurnTeam = v.currentTurnTeam ?? v.CurrentTurnTeam;
@@ -257,7 +332,7 @@ const VetoComponent = {
 
         const matchId = Store.state.currentMatchId || v.matchId || v.MatchId;
         if (!matchId) {
-            console.error('[Veto] No matchId available. State:', JSON.stringify({ currentMatchId: Store.state.currentMatchId, vetoMatchId: v.matchId || v.MatchId }));
+            console.error('[Veto] No matchId available.');
             Utils.showToast('Unable to process ban. Please refresh the page.', 'error');
             return;
         }
@@ -271,42 +346,46 @@ const VetoComponent = {
 
         const actualName = mapObj.name || mapObj.Name || mapName;
 
-        // FACEIT ARCHITECTURE:
-        // 1. Synchronously lock the entire grid to prevent ANY click on another map.
-        // 2. Transition ONLY the clicked card into immediate "Banning..." visual state in-place.
+        // 3. Set client-side lock
+        Store._isBanning = true;
+
+        // 4. Lock grid styles immediately
         const mapsGrid = document.getElementById('veto-maps-grid');
         if (mapsGrid) {
             mapsGrid.classList.add('veto-locked');
-            mapsGrid.style.pointerEvents = 'none';
         }
 
+        // 5. In-place card transition to BANNING...
         const cardEl = document.querySelector(`[data-map-name="${actualName}"]`);
         if (cardEl) {
             cardEl.classList.add('border-danger', 'scale-[0.98]', 'opacity-80');
-            const overlayEl = cardEl.querySelector('.map-overlay');
-            if (overlayEl) {
-                overlayEl.className = 'map-overlay absolute inset-0 bg-danger/35 flex flex-col items-center justify-center z-10 pointer-events-none opacity-100';
-                overlayEl.innerHTML = `
-                    <div class="w-10 h-10 rounded-full bg-danger/20 border border-danger/40 flex items-center justify-center mb-1 animate-pulse">
-                        <svg class="w-5 h-5 text-danger" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
-                    </div>
-                    <span class="font-display font-black text-danger text-xs uppercase tracking-widest bg-black/80 px-2.5 py-1 rounded border border-danger/40">BANNING...</span>
-                `;
+            let overlayEl = cardEl.querySelector('.map-overlay');
+            if (!overlayEl) {
+                overlayEl = document.createElement('div');
+                cardEl.prepend(overlayEl);
             }
+            overlayEl.className = 'map-overlay absolute inset-0 bg-danger/35 flex flex-col items-center justify-center z-10 pointer-events-none opacity-100';
+            overlayEl.innerHTML = `
+                <div class="w-10 h-10 rounded-full bg-danger/20 border border-danger/40 flex items-center justify-center mb-1 animate-pulse">
+                    <svg class="w-5 h-5 text-danger" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </div>
+                <span class="font-display font-black text-danger text-xs uppercase tracking-widest bg-black/80 px-2.5 py-1 rounded border border-danger/40">BANNING...</span>
+            `;
         }
 
         Utils.playNotificationSound();
 
         try {
-            const res = await Api.vetoMap(matchId, actualName);
-            const updatedVeto = res?.vetoState || res?.VetoState;
-            if (updatedVeto) {
-                this.onMapVetoUpdated(updatedVeto);
-            }
+            // ─────────────────────────────────────────────────────────────
+            // SINGLE SOURCE OF TRUTH:
+            // Send command to backend. DO NOT call onMapVetoUpdated from HTTP response!
+            // Wait for SignalR MapVetoUpdated event to arrive and mutate state cleanly.
+            // ─────────────────────────────────────────────────────────────
+            await Api.vetoMap(matchId, actualName);
         } catch (error) {
             console.error("Veto failed:", error);
+            Store._isBanning = false;
             Utils.showToast(error.message || 'Failed to ban map. Please try again.', 'error');
-            // Re-render UI to restore original state and unlock
             this.renderMapVetoUI();
         }
     }

@@ -1,230 +1,249 @@
 # MatchmakingEngine
 
-![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)
-![ASP.NET Core](https://img.shields.io/badge/ASP.NET_Core-Web_API-512BD4?logo=dotnet)
+![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)
+![ASP.NET Core](https://img.shields.io/badge/ASP.NET_Core-Web_API-512BD4?logo=dotnet&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white)
-![SignalR](https://img.shields.io/badge/SignalR-Real--time-512BD4?logo=dotnet)
-![Hangfire](https://img.shields.io/badge/Hangfire-Background_Jobs-2C3E50)
+![SignalR](https://img.shields.io/badge/SignalR-Real--time-512BD4?logo=dotnet&logoColor=white)
+![Hangfire](https://img.shields.io/badge/Hangfire-Background_Jobs-2C3E50?logo=hangfire&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?logo=docker&logoColor=white)
-![AWS](https://img.shields.io/badge/AWS-Elastic_Beanstalk-FF9900?logo=amazonaws&logoColor=white)
+![Nginx](https://img.shields.io/badge/Nginx-Reverse_Proxy-009639?logo=nginx&logoColor=white)
+![AWS EC2](https://img.shields.io/badge/AWS-EC2_Ubuntu_24.04-FF9900?logo=amazonaws&logoColor=white)
+![Fail2ban](https://img.shields.io/badge/Security-Fail2ban_Active-brightgreen?logo=shield)
+![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub_Actions-2088FF?logo=githubactions&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green.svg)
 
-A real-time competitive matchmaking backend built with .NET 10 and ASP.NET Core. The project implements core platform features analogous to FACEIT or CS2's competitive system: MMR-based queuing, party management, a map veto phase with AFK auto-ban, post-match statistics, and a real-time leaderboard.
+A high-performance, horizontally scalable, distributed competitive matchmaking and tournament veto platform inspired by **FACEIT**, **CS2 Premier**, and **Dota 2**. 
 
----
-
-## Architecture
-
-The solution follows **Clean Architecture** principles with strict layer separation:
-
-```
-MatchmakingEngine/           # ASP.NET Core Web API (host, controllers, hubs, workers)
-MatchmakingEngine.Application/  # Use cases, CQRS commands & queries, validators, interfaces
-MatchmakingEngine.Domain/    # Domain entities, value objects, domain events
-MatchmakingEngine.Infrastructure/  # EF Core, repositories, Redis services, caching
-MatchmakingEngine.Tests/     # Unit and integration tests
-MatchmakingClient/           # Vanilla JS/HTML/CSS frontend
-```
-
-**CQRS** is implemented via **MediatR**: every action in the system is expressed as an explicit Command or Query with its own handler. A pipeline behavior (`ValidationBehavior`) intercepts every command and runs **FluentValidation** before the handler executes, ensuring invalid data never reaches the domain layer.
-
-**Domain Events** are raised from aggregate roots (e.g., `PlayerMmrChangedEvent` when a match completes) and dispatched by EF Core's `SaveChangesAsync` through registered MediatR notification handlers, keeping side effects decoupled from the core business logic.
+Built with **.NET 10** and **ASP.NET Core**, the solution showcases production-grade distributed system patterns: **Redis Distributed Locks** for atomic turn-based operations, **Redis Sorted Sets** with dynamic MMR delta expansion, a **Dual-Level Cache (L1 Memory + L2 Redis)**, **SignalR WebSocket mesh** with a Redis backplane, resilient **Hangfire AFK fallback jobs**, and a modern, high-fps **Modular Single Page Application (SPA)** orchestrated with **Docker Compose**, **Nginx**, and **Fail2ban** on **AWS EC2**.
 
 ---
 
-## Key Technical Decisions
+## Architecture Overview
 
-### Matchmaking Queue (Redis ZSET)
-Players are stored in Redis Sorted Sets keyed by region and game mode, with their MMR as the score. The `MatchmakingWorker` (a `BackgroundService`) alternates between Solo and Duo modes every 2 seconds, pulls an anchor player, and queries Redis for candidates within a dynamic MMR delta. The delta starts at 50 and grows over time so that long-waiting players gradually accept broader matches. Trust Factor is also checked: the difference between players' trust values must stay within a widening threshold.
+The backend is built following **Clean Architecture** and **Domain-Driven Design (DDD)** principles, separating core domain models, business use-cases, external infrastructure, and presentation layers:
 
-### Two-Level Cache
-`TwoLevelCacheService` implements a read-through cache: it first checks in-process `IMemoryCache`, then falls back to distributed Redis cache, and only hits the database if both miss. This minimizes latency on frequently-read data like leaderboards.
+```
+MatchmakingEngine/
+├── MatchmakingEngine/              # ASP.NET Core API Host (Controllers, SignalR Hubs, Workers, Middleware)
+├── MatchmakingEngine.Application/  # CQRS Commands & Queries (MediatR), Pipeline Behaviors, FluentValidation
+├── MatchmakingEngine.Domain/       # Domain Entities, Aggregate Roots, Domain Events, Custom Exceptions
+├── MatchmakingEngine.Infrastructure/ # EF Core DbContext, Repositories, Redis Lock, ZSET Queue, Hangfire
+├── MatchmakingEngine.Tests/        # Unit & Integration Tests (xUnit, Moq, FluentAssertions)
+└── MatchmakingClient/              # Modular Vanilla SPA (Nginx Reverse Proxy, Router, State Store, 60fps UI)
+```
 
-### Map Veto & AFK Auto-Ban
-When a match is accepted by all players, it transitions to `MapVeto` status. Captains (determined by MMR) alternate banning maps via SignalR. After each ban, `BanMapCommandHandler` schedules a new **Hangfire** delayed job that fires in 30 seconds. If the next captain hasn't acted by then, `MapVetoTimeoutEventHandler` selects and bans a random available map on their behalf. This guarantees the veto phase always completes.
+### High-Level System Architecture
 
-### Match Cleanup
-`MatchCleanupWorker` polls every 5 seconds and cancels any match stuck in `Pending` status for more than 30 seconds (i.e., at least one player failed to accept), notifying clients over SignalR.
+```mermaid
+flowchart TD
+    subgraph ClientLayer["Frontend Client & Gateway"]
+        Browser["User Browser (Modular SPA)"]
+        Nginx["Nginx Reverse Proxy & Static Host (:80)"]
+    end
 
-### Optimistic Concurrency
-The `Match` entity has a `[Timestamp]` (`xmin`) column in PostgreSQL, ensuring concurrent updates to the same match (e.g., two players simultaneously banning a map) are detected and handled safely.
+    subgraph APILayer["Application Cluster (Docker Compose)"]
+        API1["MatchmakingEngine API (:8080)"]
+        MediatR["MediatR Pipeline & Validation"]
+        Workers["Hosted Workers (MatchmakingWorker, MatchCleanup)"]
+    end
 
-### Rate Limiting
-A global fixed-window rate limiter is applied at the ASP.NET Core middleware level: 30 requests per second per IP. Excess requests receive HTTP 429.
+    subgraph DataLayer["Distributed Data & Messaging Layer"]
+        Postgres[("PostgreSQL 15 (Matches, Players, History, Hangfire)")]
+        RedisQueue[("Redis ZSET (MMR Queues)")]
+        RedisLock[("Redis Distributed Lock (Map Veto)")]
+        RedisBackplane[("Redis SignalR Backplane & L2 Cache")]
+        Hangfire["Hangfire (30s Delayed Auto-Ban Jobs)"]
+    end
 
-### Health Checks
-`/health` endpoint exposes the status of both PostgreSQL and Redis connections, suitable for load balancer and AWS ECS health probes.
+    Browser <-->|HTTP REST / WebSocket| Nginx
+    Nginx <-->|Proxy Pass: /api/ & /hubs/| API1
+    API1 <--> MediatR
+    API1 <--> Workers
+    MediatR <-->|Read / Write| Postgres
+    MediatR <-->|Acquire / Release Lock| RedisLock
+    Workers <-->|Poll & Match Range| RedisQueue
+    API1 <-->|Pub / Sub Events| RedisBackplane
+    MediatR <-->|Schedule / Trigger| Hangfire
+```
+
+---
+
+## Key Technical Decisions & Engineering Patterns
+
+### 1. Atomic Map Veto via Redis Distributed Locks
+During competitive map vetos, captains ban maps in a strict turn-based sequence. In a multi-replica distributed deployment, simultaneous ban requests or fast double-clicks can create race conditions and phantom bans.
+- While PostgreSQL provides row-level optimistic concurrency via `[Timestamp]` (`xmin`), relying solely on database concurrency causes high conflict rates and transaction rollbacks under load.
+- **Solution:** Implemented `IDistributedLockService` (`RedisDistributedLockService`) utilizing Redis atomic primitives (`LockTakeAsync` / `LockReleaseAsync`) on `lock:veto:{MatchId}`.
+- Every ban action acquires an exclusive distributed lock with automatic lease expiration and exponential backoff retry. This guarantees atomic, strictly serialized execution across all API instances before domain logic and database updates occur.
+
+### 2. Dynamic MMR Matchmaking Queue (Redis Sorted Sets)
+- Players in the queue are indexed in Redis **Sorted Sets (`ZSET`)** partitioned by region and mode, where the player's MMR serves as the set score.
+- The `MatchmakingWorker` runs continuously in the background, alternating between Solo and Duo pools every 2 seconds.
+- It selects an anchor player and queries Redis using `ZRANGEBYSCORE` with a **dynamically expanding MMR window**:
+  $$\text{MMR Window} = [\text{MMR} - \Delta, \text{MMR} + \Delta]$$
+  $\Delta$ starts at $\pm 50$ and grows based on elapsed queue wait time.
+- **Trust Factor Validation:** Players are only matched if their Trust Factor difference falls within acceptable safety tolerances, protecting high-reputation players from toxic/suspicious accounts.
+
+### 3. AFK Auto-Ban Engine & Captain Fallback
+- When all players accept a match, the match enters the `MapVeto` phase.
+- For each turn, `BanMapCommandHandler` schedules a **Hangfire** delayed job set to fire in 30 seconds.
+- If the active captain fails to ban in time, `MapVetoTimeoutEventHandler` intercepts the event, selects a random remaining map, and executes the ban.
+- **Captain Resilience:** If an original captain disconnects, the system employs an automated fallback (`match.Players.FirstOrDefault(p => p.Team == X)`), ensuring the veto phase never halts or deadlocks.
+
+### 4. Two-Level Read-Through Cache (L1 Memory + L2 Redis)
+- High-read endpoints (such as top MMR leaderboards and player profiles) utilize `TwoLevelCacheService`:
+  - **L1 (In-Memory Cache):** Near-zero latency in-process lookups.
+  - **L2 (Distributed Redis):** Shared across all API replicas, eliminating cache stampedes.
+  - **Database (PostgreSQL):** Accessed only when both L1 and L2 miss.
+- Domain events (e.g., `PlayerMmrChangedEvent`) publish cache eviction notifications, maintaining high performance without sacrificing data consistency.
+
+### 5. Modular Client Architecture & 60 FPS Engine
+The frontend was refactored from a monolithic script into a clean, modern, modular Single Page Application:
+- **Componentized Structure:** `state.js` (centralized store and reentrancy locks), `router.js` (hash-based SPA navigation), `signalr-manager.js` (isolated WebSocket communication), and modular feature components (`queue.js`, `veto.js`, `lobby.js`, `leaderboard.js`, `profile.js`, `admin.js`).
+- **In-Place DOM Mutation:** Map cards during the veto phase mutate their styles and state in-place instead of destroying and re-rendering via `innerHTML`. This eliminates DOM layout thrashing and input desynchronization.
+- **GPU-Accelerated 60 FPS UI:** Removed all performance-heavy full-viewport `backdrop-filter: blur()` effects that caused software rasterization drops (~5 FPS) during multi-window testing on Chromium. Replaced with compositor-only properties (`transform`, `opacity`) and discrete 1s timer steps, delivering a silky-smooth esports-grade interface.
+
+### 6. Production Hardening & Server-Level Security
+- **Fail2ban Integration:** Configured on the AWS EC2 production host with a `systemd` backend for SSH port 22 (`bantime = 1h`, `maxretry = 5`), automatically banning brute-force IPs.
+- **Nginx Reverse Proxy:** Serves frontend assets with cache-busting headers (`Cache-Control: no-cache, no-store`), proxies `/api/` to the backend cluster, and manages persistent WebSocket connections (`/hubs/`) with zero-buffering.
+- **Security Headers:** Injects `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`, and `X-XSS-Protection: 1; mode=block`.
+- **API Rate Limiting:** Global fixed-window rate limiter enforcing a strict 30 requests/sec per IP threshold at the middleware level.
 
 ---
 
 ## Technology Stack
 
-| Layer | Technology |
+| Domain | Technologies |
 |---|---|
-| Runtime | .NET 10, ASP.NET Core |
-| Pattern | Clean Architecture, CQRS (MediatR), DDD |
-| Database | PostgreSQL, Entity Framework Core 10 |
-| Caching | Redis (StackExchange.Redis), IMemoryCache |
-| Real-time | ASP.NET Core SignalR (Redis backplane) |
-| Background Jobs | Hangfire (PostgreSQL storage) |
-| Validation | FluentValidation (pipeline behavior) |
-| Logging | Serilog (Console + rolling file sink) |
-| Auth | JWT Bearer tokens (BCrypt password hashing) |
-| Testing | xUnit, Moq, FluentAssertions, EF Core InMemory |
-| Containerization | Docker, Docker Compose |
-| Cloud | AWS Elastic Beanstalk, RDS (PostgreSQL), ElastiCache (Redis) |
-| CI/CD | GitHub Actions |
-| Frontend | Vanilla JavaScript, HTML5, CSS3 |
+| **Runtime & Core** | .NET 10, C# 14, ASP.NET Core Web API |
+| **Architecture** | Clean Architecture, CQRS (MediatR), Domain-Driven Design (DDD) |
+| **Data Persistence** | PostgreSQL 15, Entity Framework Core 10, Npgsql |
+| **Distributed Caching & Locks**| Redis 7, StackExchange.Redis, Redis Distributed Locks, Two-Level Cache |
+| **Real-Time WebSockets** | ASP.NET Core SignalR with Redis Backplane |
+| **Asynchronous Job Scheduling**| Hangfire (PostgreSQL Storage) |
+| **Validation & Pipeline** | FluentValidation, MediatR Pipeline Behaviors |
+| **Security & Auth** | JWT Bearer Authentication, BCrypt Password Hashing, Rate Limiting Middleware |
+| **Client Frontend** | Vanilla JavaScript (ES6+ Modular SPA), HTML5, Tailwind CSS, SVG Graphics |
+| **Reverse Proxy & Gateway** | Nginx Alpine (Reverse Proxy, WebSockets, Cache-Busting) |
+| **Containerization & Cloud** | Docker, Docker Compose, AWS EC2 (Ubuntu 24.04 LTS), Elastic IP |
+| **Security Hardening** | Fail2ban (Host SSH Protection), Nginx Security Headers |
+| **CI / CD** | GitHub Actions (.NET Build/Test Runner, Native OpenSSH EC2 Deployment) |
+| **Testing** | xUnit, Moq, FluentAssertions, EF Core InMemory |
 
 ---
 
 ## API Endpoints
 
+### Authentication & Players
 | Method | Route | Description |
 |---|---|---|
-| POST | `/api/Auth/login` | Authenticate and receive a JWT |
-| POST | `/api/Players/register` | Register a new player |
-| GET | `/api/Players/{id}` | Get player profile |
-| GET | `/api/Players/my/history` | Get authenticated player's match history |
-| POST | `/api/Matchmaking/join` | Join the matchmaking queue |
-| POST | `/api/Matchmaking/leave` | Leave the matchmaking queue |
-| GET | `/api/Matchmaking/status` | Poll current queue or match status |
-| POST | `/api/Matchmaking/accept/{matchId}` | Accept a found match |
-| POST | `/api/Matchmaking/decline/{matchId}` | Decline a found match |
-| POST | `/api/Matchmaking/veto/{matchId}/{mapName}` | Ban a map during veto phase |
-| POST | `/api/Matchmaking/complete/{matchId}` | (Admin) Complete a match and record stats |
-| GET | `/api/Friends` | Get friend list |
-| GET | `/api/Friends/pending` | Get incoming friend requests |
-| POST | `/api/Friends/request/{targetId}` | Send a friend request |
-| POST | `/api/Friends/accept/{requestId}` | Accept a friend request |
-| DELETE | `/api/Friends/{friendshipId}` | Remove a friend |
-| POST | `/api/Party/create` | Create a party |
-| POST | `/api/Party/invite/{friendId}` | Invite a friend to party |
-| POST | `/api/Party/join/{partyId}` | Join a party via invite |
-| POST | `/api/Party/leave` | Leave current party |
-| GET | `/api/Leaderboard` | Fetch global MMR leaderboard |
-| GET | `/api/Admin/matches` | (Admin) Get all matches |
-| GET | `/health` | Health check (PostgreSQL + Redis) |
+| `POST` | `/api/Auth/login` | Authenticate player and issue JWT token |
+| `POST` | `/api/Players/register` | Register new competitive player account |
+| `GET` | `/api/Players/{id}` | Retrieve public player profile by ID |
+| `GET` | `/api/Players/my/history` | Retrieve authenticated player's recent match history |
 
-**SignalR Hub:** `wss://{host}/hubs/matchmaking`
+### Matchmaking & Veto
+| Method | Route | Description |
+|---|---|---|
+| `POST` | `/api/Matchmaking/join` | Join the competitive matchmaking queue |
+| `POST` | `/api/Matchmaking/leave` | Leave the matchmaking queue |
+| `GET` | `/api/Matchmaking/status` | Poll current queue or active match status |
+| `POST` | `/api/Matchmaking/accept/{matchId}` | Accept a found match within the 30-second window |
+| `POST` | `/api/Matchmaking/decline/{matchId}` | Decline a found match (cancels match for all players) |
+| `POST` | `/api/Matchmaking/veto/{matchId}/{mapName}`| Ban a map during the veto phase (Distributed Lock protected) |
+| `POST` | `/api/Matchmaking/complete/{matchId}` | (Admin) Complete a match, record scoreboard & calculate MMR |
+
+### Social & Party Management
+| Method | Route | Description |
+|---|---|---|
+| `GET` | `/api/Friends` | Get friend list with online statuses |
+| `GET` | `/api/Friends/pending` | Get incoming/outgoing friend requests |
+| `POST` | `/api/Friends/request/{targetId}` | Send a friend request to another player |
+| `POST` | `/api/Friends/accept/{requestId}` | Accept an incoming friend request |
+| `DELETE`| `/api/Friends/{friendshipId}` | Remove a friend |
+| `POST` | `/api/Party/create` | Create a duo lobby |
+| `POST` | `/api/Party/invite/{friendId}` | Invite a friend to your party |
+| `POST` | `/api/Party/join/{partyId}` | Accept party invite and join lobby |
+| `POST` | `/api/Party/leave` | Leave current party |
+
+### Leaderboard, Administration & Diagnostics
+| Method | Route | Description |
+|---|---|---|
+| `GET` | `/api/Leaderboard` | Fetch global Top 100 MMR leaderboard (Cached) |
+| `GET` | `/api/Admin/matches` | (Admin) Get real-time status of all active & past matches |
+| `GET` | `/health` | Health probe (PostgreSQL + Redis connectivity) |
 
 ---
 
-## SignalR Events (Server → Client)
+## SignalR Real-Time Events (Server → Client)
+
+Hub Endpoint: `wss://{host}/hubs/matchmaking`
 
 | Event | Payload | Description |
 |---|---|---|
-| `MatchFound` | `matchId` | A match has been found for the player |
-| `MatchAccepted` | — | All players accepted; veto phase begins |
-| `MatchCanceled` | — | Match was canceled (player declined or timed out) |
-| `MatchReadyForVeto` | `VetoStateDto` | Full veto state sent to clients |
-| `MapVetoUpdated` | `VetoStateDto` | A map was banned; updated state |
-| `MatchStarting` | `matchId` | Veto complete; server is starting |
-| `MatchFinished` | `ResultDto` | Match ended; scoreboard and MMR changes |
-| `PartyInviteReceived` | `partyId, senderId` | A friend sent a party invite |
-| `PlayerJoinedParty` | `playerId` | A new member joined your party |
-| `AdminMatchesUpdated` | — | (Admin broadcast) Match list changed |
+| `MatchFound` | `matchId` | Broadcast to all matched players when a match is formed |
+| `MatchAccepted` | - | Emitted when all players have confirmed ready |
+| `MatchCanceled` | - | Broadcast if any player declines or fails to accept |
+| `MatchReadyForVeto` | `VetoStateDto` | Initialized veto state sent to captains with map pool & turn info |
+| `MapVetoUpdated` | `VetoStateDto` | Broadcast immediately after a map is banned (updates cards in-place) |
+| `MatchStarting` | `matchId` | Emitted upon completion of the final ban; server begins launch |
+| `MatchFinished` | `ResultDto` | Match concluded; broadcasts final scoreboard, K/D, and MMR changes |
+| `PartyInviteReceived` | `partyId, senderId` | Real-time party invite alert delivered to invited friend |
+| `PlayerJoinedParty` | `playerId` | Broadcast to party members when a new player enters the lobby |
+| `AdminMatchesUpdated`| - | Real-time broadcast triggering admin dashboard table refresh |
 
 ---
 
-## Local Development
+## Local Development Setup
 
-**Prerequisites:** .NET 10 SDK, Docker Desktop
+### Prerequisites
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- Git
 
-### 1. Clone the repository
-
+### 1. Clone Repository
 ```bash
 git clone https://github.com/xhanjo/MatchmakingEngine.git
 cd MatchmakingEngine
 ```
 
-### 2. Start infrastructure
-
+### 2. Launch Infrastructure with Docker Compose
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
+This automatically boots:
+- **PostgreSQL 15** on port `5432`
+- **Redis 7** on port `6379`
+- **API Container (`api1`)** on port `5001`
+- **Nginx Frontend** on port `80`
 
-This starts PostgreSQL on port `5432` and Redis on port `6379`. The compose file also defines two API replicas (`api1`, `api2`) behind a shared Redis SignalR backplane, demonstrating horizontal scalability.
-
-### 3. Configure secrets
-
-Copy `appsettings.json` and fill in the JWT key:
-
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Host=localhost;Port=5432;Database=MatchmakingDb;Username=postgres;Password=your_password"
-  },
-  "Jwt": {
-    "Issuer": "MatchmakingEngine",
-    "Audience": "MatchmakingClients",
-    "Key": "your_secret_key_at_least_32_characters"
-  },
-  "Redis": {
-    "Configuration": "localhost:6379,abortConnect=false"
-  }
-}
-```
-
-### 4. Run the API
-
+### 3. Run Backend (Standalone / Debugging)
+If running the API locally in Visual Studio / JetBrains Rider:
 ```bash
 dotnet run --project MatchmakingEngine/MatchmakingEngine.csproj
 ```
+- EF Core database migrations apply automatically on startup with retry resilience.
+- Default administrator credentials: `admin` / `Admin123!`
+- Swagger UI available at: `http://localhost:5001/swagger`
 
-EF Core migrations are applied automatically on startup with a retry policy (5 attempts, 2s interval). A default `admin` account (`Admin123!`) is seeded if it does not exist.
-
-### 5. Run the frontend
-
-Serve `MatchmakingClient/` with any static file server. In VS Code, use the Live Server extension and open `index.html`.
-
-Swagger UI is available at `http://localhost:{port}/swagger` in Development mode.
-
-### 6. Run tests
-
+### 4. Run Tests
 ```bash
 dotnet test MatchmakingEngine.Tests/MatchmakingEngine.Tests.csproj
 ```
 
 ---
 
-## Deployment (AWS)
+## Production Deployment (AWS EC2)
 
-The application is deployed to **AWS Elastic Beanstalk** (Docker platform):
+The application is deployed on an **AWS EC2** instance running **Ubuntu 24.04 LTS**:
 
-- The API container connects to **Amazon RDS** (PostgreSQL) and **Amazon ElastiCache** (Redis).
-- EF Core migrations are applied at startup, so no manual database access is required after deployment.
-- Hangfire uses the same PostgreSQL instance for job persistence.
-- GitHub Actions builds and pushes the Docker image on every push to `main`.
+- **Continuous Deployment:** Managed by GitHub Actions (`.github/workflows/cd.yml`). When code is pushed to `main`, the workflow validates tests via `.NET CI`, connects to EC2 via native OpenSSH, pulls the latest code, and builds/recreates containers via Docker Compose.
+- **Fail2ban SSH Protection:** Configured with a dedicated jail in `/etc/fail2ban/jail.local` monitoring systemd logs on SSH port 22, banning malicious IPs after 5 failed attempts for 1 hour.
+- **Nginx Reverse Proxy:** Terminates incoming web traffic on port 80, directs WebSocket traffic cleanly to `/hubs/`, and handles static SPA delivery with optimal caching rules.
 
 ---
 
-## Project Structure Details
+## License
 
-```
-MatchmakingEngine.Domain/
-  Common/              # Entity base class with domain event dispatch
-  Events/              # Domain events (e.g., PlayerMmrChangedEvent)
-  Exceptions/          # Domain-specific exceptions (NotFoundException, ConflictException)
-
-MatchmakingEngine.Application/
-  Application/
-    Behaviors/         # MediatR pipeline: ValidationBehavior
-    Commands/          # One folder per domain area (Auth, Matchmaking, Friends, Party, Players)
-    Queries/           # Leaderboard, MatchHistory, Status
-  EventHandlers/       # MediatR notification handlers (domain event side effects)
-  Interfaces/          # Repository contracts, ILeaderboardService, ICacheService, IMatchmakingQueue
-
-MatchmakingEngine.Infrastructure/
-  Data/                # EF Core DbContext, entity configurations
-  Migrations/          # EF Core migrations
-  Repositories/        # Concrete repository implementations
-  Services/            # LeaderboardService (Redis ZSET), MatchmakingQueue, TwoLevelCacheService
-
-MatchmakingEngine/ (API host)
-  Controllers/         # Auth, Players, Matchmaking, Friends, Party, Leaderboard, Admin
-  Hubs/                # MatchmakingHub (SignalR)
-  HostedServices/      # MatchmakingWorker, MatchCleanupWorker, LeaderboardSeederWorker
-  Events/              # Application-level event handlers (MapVetoTimeout)
-  Middlewares/         # GlobalExceptionHandler
-```
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
